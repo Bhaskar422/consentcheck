@@ -8,7 +8,7 @@ Built for the **Vultr Agent Rush Hackathon, Challenge 1: Blast Radius Zero**.
 
 | | |
 |---|---|
-| Live demo | https://95-179-164-131.sslip.io/ (Vultr Cloud Compute, Frankfurt, gVisor) |
+| Live demo | https://consentcheck.mindgears.dev (Vultr Cloud Compute, Frankfurt, gVisor) |
 | Demo video | `<link>` |
 | Source | https://github.com/Bhaskar422/consentcheck |
 | Track | Blast Radius Zero, Pattern B (sandboxed browser use) |
