@@ -130,11 +130,11 @@ def _pending():
     return sum(1 for s in orchestrator.SCANS.values() if s["status"] in ("queued", "running"))
 
 
-def _launch(url, client=""):
+def _launch(url, client="", batch=False):
     orchestrator.prune_old_runs()
     scan = orchestrator.new_scan(url)
     _owner[scan["id"]] = client
-    task = asyncio.create_task(orchestrator.run_scan(scan))
+    task = asyncio.create_task(orchestrator.run_scan(scan, batch=batch))
     _tasks.add(task)
     task.add_done_callback(_tasks.discard)
     return scan
@@ -194,7 +194,8 @@ async def create_batch(body: BatchIn, request: Request):
         raise HTTPException(429, f"The queue holds at most {MAX_BATCH} audits. {_pending()} are already waiting.")
     _check_visitor_quota(request, len(urls))
     owner = "admin" if admin else _client(request)
-    ids = [_launch(u, owner)["id"] for u in urls]
+    # Admin batches use the batch lane; a visitor's handful of sites runs like single audits.
+    ids = [_launch(u, owner, batch=bool(admin) and len(urls) > MAX_PUBLIC_BATCH)["id"] for u in urls]
     return {"queued": len(ids), "ids": ids, "invalid": bad}
 
 

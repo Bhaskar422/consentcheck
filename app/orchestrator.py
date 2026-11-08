@@ -34,6 +34,10 @@ SCAN_TIMEOUT = float(os.environ.get("CC_SCAN_TIMEOUT", "300"))
 log = logging.getLogger("uvicorn.error")
 SCANS: dict = {}
 _slots = asyncio.Semaphore(MAX_CONCURRENT)
+# Large batches run in their own lane with fewer slots, so an audit a person just
+# started (a visitor, a judge, a demo) never waits behind a 100-site batch.
+BATCH_CONCURRENT = max(1, int(os.environ.get("CC_BATCH_CONCURRENT", str(max(1, MAX_CONCURRENT - 1)))))
+_batch_slots = asyncio.Semaphore(BATCH_CONCURRENT)
 
 INJECTION_RE = re.compile(
     r"(ai|automated|llm)[\s-]+(agent|auditor|assistant|compliance)|ignore (all |any )?(the )?(previous|prior) instructions"
@@ -321,8 +325,8 @@ def template_report(findings):
 # --------------------------------------------------------------------------
 # The run
 # --------------------------------------------------------------------------
-async def run_scan(scan):
-    async with _slots:
+async def run_scan(scan, batch: bool = False):
+    async with (_batch_slots if batch else _slots):
         scan["status"] = "running"
         try:
             await asyncio.wait_for(_run(scan), SCAN_TIMEOUT)
