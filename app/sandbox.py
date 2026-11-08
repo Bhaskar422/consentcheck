@@ -27,6 +27,7 @@ MEMORY = os.environ.get("CC_SANDBOX_MEMORY", "1g")
 CPUS = os.environ.get("CC_SANDBOX_CPUS", "1")
 PIDS = os.environ.get("CC_SANDBOX_PIDS", "512")
 STEP_TIMEOUT = float(os.environ.get("CC_STEP_TIMEOUT", "60"))
+GUARD_DNS = os.environ.get("CC_GUARD_DNS", "1.1.1.1 8.8.8.8").split()
 
 
 class SandboxDied(Exception):
@@ -82,8 +83,21 @@ class Sandbox:
         os.chmod(log_file, 0o666)
         await _run("docker", "network", "create", "--internal", self.net)
         runtime = ["--runtime", RUNTIME] if RUNTIME and RUNTIME != "runc" else []
+        dns = []
+        if runtime:
+            # gVisor has its own network stack, so Docker's embedded DNS (127.0.0.11,
+            # implemented with iptables inside the container) does not answer. The
+            # guard gets plain public resolvers instead; the browser never resolves
+            # names itself (everything goes through the guard).
+            resolv = self.evidence_dir.parent / ".guard_resolv.conf"
+            if not resolv.exists():
+                resolv.write_text("".join(f"nameserver {ns}\n" for ns in GUARD_DNS))
+                os.chmod(resolv, 0o644)
+            dns = ["-v", f"{resolv}:/etc/resolv.conf:ro"]
+        # create -> attach both networks -> start: gVisor cannot hot-plug a
+        # network interface into a running container.
         await _run(
-            "docker", "run", "-d", "--name", self.proxy, *runtime,
+            "docker", "create", "--name", self.proxy, *runtime, *dns,
             "--network", self.net, "--network-alias", "egress",
             "--memory", "256m", "--cpus", "0.5", "--pids-limit", "128",
             "--read-only", "--tmpfs", "/tmp:rw,size=64m,mode=1777",
@@ -102,7 +116,13 @@ class Sandbox:
         )
         # Give the guard (and only the guard) a route to the internet.
         await _run("docker", "network", "connect", "bridge", self.proxy)
+        await _run("docker", "start", self.proxy)
         await self._wait_for_proxy()
+        # The browser reaches the guard by IP: name lookups via Docker DNS do not
+        # work under gVisor, and an IP leaves nothing for the page to influence.
+        _, ip, _ = await _run("docker", "inspect", "-f",
+                              "{{(index .NetworkSettings.Networks \"%s\").IPAddress}}" % self.net, self.proxy)
+        proxy_url = f"http://{ip.strip()}:8080" if ip.strip() else "http://egress:8080"
 
         args = [
             "docker", "run", "-i", "--rm", "--name", self.sbx,
@@ -111,7 +131,7 @@ class Sandbox:
             "--memory", MEMORY, "--memory-swap", MEMORY, "--cpus", CPUS,
             "--pids-limit", PIDS, "--shm-size", "64m",
             "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
-            "-e", "CC_PROXY=http://egress:8080",
+            "-e", f"CC_PROXY={proxy_url}",
         ]
         if RUNTIME and RUNTIME != "runc":
             args += ["--runtime", RUNTIME]
