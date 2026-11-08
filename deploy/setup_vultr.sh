@@ -6,6 +6,7 @@
 # as a systemd service behind Caddy on port 80, and adds host firewall rules so
 # no container can reach the cloud metadata service or private networks.
 set -euo pipefail
+export DEBIAN_FRONTEND=noninteractive
 
 APP_DIR=/opt/consentcheck
 APP_USER=consentcheck
@@ -20,7 +21,7 @@ DOMAIN=${CC_DOMAIN:-${IP//./-}.sslip.io}
 
 echo "==> Base packages"
 apt-get update -y
-apt-get install -y ca-certificates curl gnupg python3-venv caddy ufw iptables-persistent
+apt-get install -y ca-certificates curl gnupg openssl python3-venv caddy ufw
 
 echo "==> Docker"
 if ! command -v docker >/dev/null; then
@@ -40,6 +41,7 @@ runsc install
 python3 - <<'PY'
 import json, pathlib
 p = pathlib.Path("/etc/docker/daemon.json")
+p.parent.mkdir(parents=True, exist_ok=True)
 cfg = json.loads(p.read_text()) if p.exists() and p.read_text().strip() else {}
 cfg["icc"] = False
 p.write_text(json.dumps(cfg, indent=2))
@@ -47,20 +49,17 @@ PY
 systemctl restart docker
 docker run --rm --runtime=runsc hello-world >/dev/null && echo "    gVisor works"
 
-echo "==> Host firewall: containers may not reach cloud metadata or the Vultr VPC (10.0.0.0/8)"
-# Second layer behind the egress guard. 172.16/12 and 192.168/16 are left alone
-# because Docker allocates its own container networks from those ranges.
-for net in 169.254.0.0/16 10.0.0.0/8 100.64.0.0/10; do
-  iptables -C DOCKER-USER -d "$net" -j DROP 2>/dev/null || iptables -I DOCKER-USER -d "$net" -j DROP
-done
-netfilter-persistent save
+echo "==> Host firewall: containers may not reach cloud metadata or the Vultr VPC"
+bash "$SRC_DIR"/deploy/firewall.sh   # the service re-applies this on every start
 ufw allow OpenSSH && ufw allow 80/tcp && ufw allow 443/tcp && ufw --force enable
 
 echo "==> App user and code"
 id -u $APP_USER >/dev/null 2>&1 || useradd --system --create-home --shell /usr/sbin/nologin $APP_USER
 usermod -aG docker $APP_USER
 mkdir -p $APP_DIR
+mkdir -p $APP_DIR/deploy
 cp -r "$SRC_DIR"/app "$SRC_DIR"/proxy "$SRC_DIR"/sandbox "$SRC_DIR"/scripts "$SRC_DIR"/sites "$SRC_DIR"/requirements.txt $APP_DIR/
+install -m 755 "$SRC_DIR"/deploy/firewall.sh $APP_DIR/deploy/firewall.sh
 mkdir -p $APP_DIR/runs
 python3 -m venv $APP_DIR/.venv
 $APP_DIR/.venv/bin/pip install -q -r $APP_DIR/requirements.txt
@@ -99,10 +98,11 @@ fi
 
 echo "==> Service"
 install -m 644 "$SRC_DIR"/deploy/consentcheck.service /etc/systemd/system/consentcheck.service
-sed "s/CC_DOMAIN/$DOMAIN/" "$SRC_DIR"/deploy/Caddyfile > /etc/caddy/Caddyfile
+sed "s/^CC_DOMAIN {/$DOMAIN {/" "$SRC_DIR"/deploy/Caddyfile > /etc/caddy/Caddyfile
 chmod 644 /etc/caddy/Caddyfile
 systemctl daemon-reload
-systemctl enable --now consentcheck
+systemctl enable consentcheck
+systemctl restart consentcheck   # picks up new code on re-runs
 systemctl restart caddy
 
 echo

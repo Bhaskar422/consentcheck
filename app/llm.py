@@ -18,6 +18,7 @@ API_KEY = os.environ.get("VULTR_INFERENCE_API_KEY", "").strip()
 AGENT_MODEL = os.environ.get("CC_AGENT_MODEL", "glm-5.3-flash")
 VERIFIER_MODEL = os.environ.get("CC_VERIFIER_MODEL", "qwen3.8-27b")
 REPORT_MODEL = os.environ.get("CC_REPORT_MODEL", "glm-5.3")
+TIMEOUT = float(os.environ.get("CC_LLM_TIMEOUT", "30"))
 
 
 def enabled() -> bool:
@@ -38,7 +39,7 @@ async def chat(model: str, messages: list, max_tokens: int = 900, temperature: f
         raise LLMError("VULTR_INFERENCE_API_KEY is not set")
     started = time.time()
     try:
-        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=10.0)) as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(TIMEOUT, connect=10.0)) as client:
             resp = await client.post(
                 f"{BASE_URL}/chat/completions",
                 headers={"Authorization": f"Bearer {API_KEY}"},
@@ -49,12 +50,14 @@ async def chat(model: str, messages: list, max_tokens: int = 900, temperature: f
         raise LLMError(f"request failed: {type(e).__name__}") from e
     if resp.status_code != 200:
         raise LLMError(f"HTTP {resp.status_code}: {resp.text[:200]}")
-    data = resp.json()
     try:
+        data = resp.json()
         text = data["choices"][0]["message"]["content"] or ""
-    except (KeyError, IndexError, TypeError) as e:
+        if not isinstance(text, str):
+            raise TypeError("content is not text")
+    except (ValueError, KeyError, IndexError, TypeError) as e:
         raise LLMError("unexpected response shape") from e
-    usage = data.get("usage") or {}
+    usage = data.get("usage") if isinstance(data.get("usage"), dict) else {}
     meta = {
         "model": model,
         "latency_ms": int((time.time() - started) * 1000),

@@ -9,6 +9,8 @@ Group=consentcheck
 WorkingDirectory=/opt/consentcheck
 EnvironmentFile=/etc/consentcheck.env
 Environment=CC_RUNS_DIR=/opt/consentcheck/runs
+# "+" runs this one step as root: container firewall rules (see deploy/firewall.sh).
+ExecStartPre=+/opt/consentcheck/deploy/firewall.sh
 # Bound to localhost only; Caddy is the public entry point. Containers cannot reach it.
 ExecStart=/opt/consentcheck/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --proxy-headers
 Restart=always

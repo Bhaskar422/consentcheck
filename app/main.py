@@ -113,7 +113,8 @@ async def login(body: LoginIn, request: Request, response: Response):
 
 
 @app.post("/api/auth/logout")
-async def logout(response: Response):
+async def logout(request: Request, response: Response):
+    auth.revoke(request)
     response.delete_cookie(auth.COOKIE, path="/")
     return {"ok": True}
 
@@ -129,6 +130,7 @@ def _pending():
 
 
 def _launch(url, client=""):
+    orchestrator.prune_old_runs()
     scan = orchestrator.new_scan(url)
     _owner[scan["id"]] = client
     task = asyncio.create_task(orchestrator.run_scan(scan))

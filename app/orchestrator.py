@@ -29,7 +29,7 @@ from .sandbox import Sandbox, SandboxDied
 
 RUNS_DIR = Path(os.environ.get("CC_RUNS_DIR", Path(__file__).resolve().parent.parent / "runs"))
 MAX_CONCURRENT = int(os.environ.get("CC_MAX_CONCURRENT", "2"))
-SCAN_TIMEOUT = float(os.environ.get("CC_SCAN_TIMEOUT", "240"))
+SCAN_TIMEOUT = float(os.environ.get("CC_SCAN_TIMEOUT", "300"))
 
 log = logging.getLogger("uvicorn.error")
 SCANS: dict = {}
@@ -123,6 +123,34 @@ def save_scan(scan):
     (d / "scan.json").write_text(json.dumps(scan, indent=2, default=list))
 
 
+# Evidence of unapproved audits is deleted after this many days, so the disk
+# cannot fill up over time. Approved reports are kept. 0 disables pruning.
+RETENTION_DAYS = float(os.environ.get("CC_RETENTION_DAYS", "30"))
+_last_prune = 0.0
+
+
+def prune_old_runs(force: bool = False) -> int:
+    """Delete finished, unapproved scans older than RETENTION_DAYS. Runs at most hourly."""
+    global _last_prune
+    now = time.time()
+    if RETENTION_DAYS <= 0 or (not force and now - _last_prune < 3600):
+        return 0
+    _last_prune = now
+    cutoff = now - RETENTION_DAYS * 86400
+    removed = 0
+    for sid, s in list(SCANS.items()):
+        if s.get("approval") or s.get("status") in ("queued", "running") or s.get("created", now) > cutoff:
+            continue
+        d = run_dir(sid)
+        if re.fullmatch(r"[0-9a-f]{10}", sid) and d.is_dir() and not d.is_symlink():
+            shutil.rmtree(d, ignore_errors=True)
+        SCANS.pop(sid, None)
+        removed += 1
+    if removed:
+        log.info("retention: deleted %d audits older than %g days", removed, RETENTION_DAYS)
+    return removed
+
+
 def load_scans():
     if not RUNS_DIR.exists():
         return
@@ -134,6 +162,7 @@ def load_scans():
             SCANS[s["id"]] = s
         except (json.JSONDecodeError, KeyError):
             continue
+    prune_old_runs(force=True)
 
 
 def _save_image(scan, name, b64):
@@ -165,6 +194,50 @@ def heuristic_choice(cands, allowed, clicked):
     return min(pool, key=score) if pool else None
 
 
+# --------------------------------------------------------------------------
+# Model replies are untrusted: coerce each one to a fixed shape before use.
+# --------------------------------------------------------------------------
+def _s(v, n=300) -> str:
+    return v[:n] if isinstance(v, str) else ""
+
+
+def _b(v) -> bool:
+    return v is True or (isinstance(v, str) and v.strip().lower() == "true")
+
+
+def clean_proposal(d: dict) -> dict:
+    cid = d.get("candidate_id")
+    return {
+        "banner_present": _b(d.get("banner_present")),
+        "candidate_id": cid if isinstance(cid, str) and cid else None,
+        "action_kind": _s(d.get("action_kind"), 20),
+        "reason": _s(d.get("reason"), 240),
+        "injection_detected": _b(d.get("injection_detected")),
+        "injection_quote": _s(d.get("injection_quote"), 240),
+    }
+
+
+def clean_verdict(d: dict) -> dict:
+    looks = d.get("looks_like")
+    conf = d.get("confidence")
+    return {
+        "banner_dismissed": _b(d.get("banner_dismissed")),
+        "looks_like": looks if looks in ("refusal", "acceptance", "unclear") else "unclear",
+        "confidence": round(float(conf), 2) if isinstance(conf, (int, float)) and not isinstance(conf, bool) and 0 <= conf <= 1 else None,
+        "notes": _s(d.get("notes"), 240),
+    }
+
+
+def clean_summary(d: dict) -> dict | None:
+    summary = _s(d.get("summary"), 1200).strip()
+    if not summary:
+        return None  # caller falls back to the template report
+    actions = d.get("actions")
+    actions = [a[:300] for a in actions if isinstance(a, str) and a.strip()][:5] if isinstance(actions, list) else []
+    return {"summary": summary, "legal_context": _s(d.get("legal_context"), 1200),
+            "actions": actions or ["See the vendor table for what to fix."]}
+
+
 async def llm_choose(scan, state, step, allowed):
     cands = [{k: c[k] for k in ("id", "text", "kind", "frame", "box")} for c in state["candidates"]]
     page_text = (state.get("page_text") or "")[:2500]
@@ -182,7 +255,7 @@ async def llm_choose(scan, state, step, allowed):
         {"role": "user", "content": content},
     ], max_tokens=700)
     scan["ai"]["calls"].append({"role": "planner", **meta})
-    return llm.extract_json(text), meta
+    return clean_proposal(llm.extract_json(text)), meta
 
 
 async def llm_verify(scan, before_b64, after_b64):
@@ -195,7 +268,7 @@ async def llm_verify(scan, before_b64, after_b64):
         {"role": "user", "content": content},
     ], max_tokens=500)
     scan["ai"]["calls"].append({"role": "verifier", **meta})
-    return llm.extract_json(text), meta
+    return clean_verdict(llm.extract_json(text)), meta
 
 
 async def llm_report(scan, findings):
@@ -218,7 +291,12 @@ async def llm_report(scan, findings):
         {"role": "user", "content": json.dumps(compact)},
     ], max_tokens=900, temperature=0.2)
     scan["ai"]["calls"].append({"role": "reporter", **meta})
-    return llm.extract_json(text)
+    summary = clean_summary(llm.extract_json(text))
+    if summary is None:
+        raise llm.LLMError("report reply had no summary")
+    if not summary["legal_context"]:
+        summary["legal_context"] = template_report(findings)["legal_context"]
+    return summary
 
 
 def template_report(findings):
@@ -324,7 +402,7 @@ async def _run(scan):
                     trace.append({"step": step, "role": "planner", "proposal": proposal, **meta})
                     if proposal.get("injection_detected"):
                         _event(scan, "policy", "Planning model flagged a prompt injection",
-                               proposal.get("injection_quote", "")[:240])
+                               proposal["injection_quote"] or "No quote given.")
                 except llm.LLMError as e:
                     _event(scan, "llm", "Planning model unavailable, using heuristics", str(e)[:200])
 
@@ -390,7 +468,7 @@ async def _run(scan):
                     _event(scan, "llm", "Independent verifier checked the click",
                            f"{meta['model']}: banner dismissed = {verdict.get('banner_dismissed')}, "
                            f"looks like {verdict.get('looks_like')} "
-                           f"(confidence {verdict.get('confidence')}). {verdict.get('notes', '')}")
+                           f"(confidence {verdict['confidence'] if verdict['confidence'] is not None else 'n/a'}). {verdict['notes']}")
                 except llm.LLMError as e:
                     _event(scan, "llm", "Verifier unavailable", str(e)[:200])
             if verdict is None:

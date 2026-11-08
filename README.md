@@ -10,6 +10,7 @@ Built for the **Vultr Agent Rush Hackathon, Challenge 1: Blast Radius Zero**.
 |---|---|
 | Live demo | `https://<your-vultr-ip-with-dashes>.sslip.io/` |
 | Demo video | `<link>` |
+| Source | https://github.com/Bhaskar422/consentcheck |
 | Track | Blast Radius Zero, Pattern B (sandboxed browser use) |
 
 ---
@@ -142,10 +143,12 @@ A website being audited is untrusted code by definition. It runs JavaScript in o
 | Process isolation | Each scan gets its own **gVisor (`runsc`)** container, with a user-space kernel between Chromium and the host. |
 | Network isolation | The sandbox sits on an **internal-only Docker network**. Its single route out is the egress guard, which blocks cloud metadata (`169.254.169.254`, `metadata.google.internal`), every non-public IP and the auditor's own server. It connects only to the IP it checked, so DNS rebinding does not work. Host iptables and `icc=false` add a second layer. |
 | Secret hygiene | **No API keys in the sandbox.** The Vultr Inference key lives only in the orchestrator, and the sandbox reports its own credential-like env vars (always none). It talks to the orchestrator only over stdin/stdout. |
-| Resource limits | 1 GB memory (no swap), 1 CPU, 512 PIDs, 60 s per step, 240 s per scan. Read-only root filesystem with a tmpfs scratch area. |
+| Resource limits | 1 GB memory (no swap), 1 CPU, 512 PIDs, 60 s per step, 300 s per scan, 30 s per model call. Read-only root filesystem with a tmpfs scratch area. |
 | Privileges | Non-root user, all Linux capabilities dropped, `no-new-privileges`. |
 | Lifecycle | Created per scan and destroyed after it, then the teardown is verified with `docker ps` / `docker network ls`. |
 | Prompt-injection resistance | Page text is marked as untrusted data in prompts. A deterministic policy gate forbids accept clicks, and verdicts come from network evidence, not model output. |
+| Untrusted model output | Every model reply is coerced to a fixed schema (types, lengths, allowed values) before use. Malformed replies, timeouts and API errors fall back to heuristics and a template report, so a bad model call never breaks or skews an audit. Tested against a fake endpoint that returns junk, wrong types, HTTP 503 and a "malicious" planner that picks Accept all (the policy gate refuses it). |
+| Admin access and data | Signed HttpOnly session cookie, login throttling, server-side logout, and sessions are invalidated when the admin password changes. Unapproved audit evidence is deleted after 30 days (`CC_RETENTION_DAYS`). |
 
 ### The containment moments (see the demo video)
 
@@ -174,16 +177,18 @@ Model names are configurable through environment variables (`CC_AGENT_MODEL`, `C
 1. Create a **Cloud Compute** instance with Ubuntu 24.04, at least 2 vCPU and 4 GB RAM, in an EU region such as Frankfurt, so sites show their EU cookie banners.
 2. Clone this repo and run the setup script:
    ```bash
-   git clone <this repo> consentcheck && cd consentcheck
+   git clone https://github.com/Bhaskar422/consentcheck.git && cd consentcheck
    sudo bash deploy/setup_vultr.sh
    ```
-3. Put your Serverless Inference key in `/etc/consentcheck.env`, then restart the service:
+3. Put your Serverless Inference key in `/etc/consentcheck.env`, check that the key works and the three models exist, then restart the service:
    ```bash
+   sudo bash -c 'set -a; . /etc/consentcheck.env; /opt/consentcheck/.venv/bin/python /opt/consentcheck/scripts/check_vultr.py'
    sudo systemctl restart consentcheck
    ```
+   If a model name is wrong, `check_vultr.py` lists the available ones; set `CC_AGENT_MODEL`, `CC_VERIFIER_MODEL` or `CC_REPORT_MODEL` in the env file.
 4. Open `https://<vm-ip-with-dashes>.sslip.io/`, or set `CC_DOMAIN=your.domain` before running the script. Caddy gets the TLS certificate automatically.
 
-The script installs Docker and gVisor, adds the host firewall rules, builds the sandbox image, and runs the app as a systemd service behind Caddy.
+The script installs Docker and gVisor, adds the host firewall rules (re-applied by the service on every start, see `deploy/firewall.sh`), builds the sandbox image, and runs the app as a systemd service behind Caddy. It is safe to run again after `git pull` to deploy new code.
 
 ### Locally (Docker Desktop, runc instead of gVisor)
 

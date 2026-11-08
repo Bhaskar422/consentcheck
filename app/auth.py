@@ -22,6 +22,7 @@ FAILURE_WINDOW = 300
 ADMIN_USER = os.environ.get("CC_ADMIN_USER", "admin")
 _SECRET = (os.environ.get("CC_SESSION_SECRET") or secrets.token_hex(32)).encode()
 _failures: dict[str, list[float]] = {}
+_revoked: dict[str, int] = {}  # signature -> expiry, for sessions ended by logout
 _password: str | None = None
 
 
@@ -44,7 +45,10 @@ def init(runs_dir: Path) -> str:
 
 
 def _sign(payload: str) -> str:
-    return hmac.new(_SECRET, payload.encode(), hashlib.sha256).hexdigest()
+    # The key includes the current password, so changing CC_ADMIN_PASSWORD (or
+    # deleting .admin_password) and restarting invalidates every existing session.
+    key = _SECRET + hashlib.sha256((_password or "").encode()).digest()
+    return hmac.new(key, payload.encode(), hashlib.sha256).hexdigest()
 
 
 def make_session(user: str) -> str:
@@ -62,7 +66,19 @@ def session_user(request: Request) -> str | None:
         return None
     if not exp.isdigit() or int(exp) < time.time():
         return None
+    if sig in _revoked:
+        return None
     return user
+
+
+def revoke(request: Request) -> None:
+    """Logout: the cookie stops working on the server too, not just in this browser."""
+    parts = request.cookies.get(COOKIE, "").split("|")
+    if len(parts) == 3 and parts[1].isdigit() and session_user(request):
+        now = time.time()
+        for k in [k for k, e in _revoked.items() if e < now]:
+            _revoked.pop(k, None)
+        _revoked[parts[2]] = int(parts[1])
 
 
 def require_admin(request: Request) -> str:
