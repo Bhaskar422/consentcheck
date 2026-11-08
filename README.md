@@ -8,7 +8,7 @@ Built for the **Vultr Agent Rush Hackathon, Challenge 1: Blast Radius Zero**.
 
 | | |
 |---|---|
-| Live demo | `https://<your-vultr-ip-with-dashes>.sslip.io/` |
+| Live demo | https://95-179-164-131.sslip.io/ (Vultr Cloud Compute, Frankfurt, gVisor) |
 | Demo video | `<link>` |
 | Source | https://github.com/Bhaskar422/consentcheck |
 | Track | Blast Radius Zero, Pattern B (sandboxed browser use) |
@@ -125,8 +125,8 @@ For complete EU results, deploy the VM in an EU region such as Frankfurt and set
  └─────────────────────────────────────────────────────────────────────────────────┘
         │
         ▼  OpenAI-compatible API
- Vultr Serverless Inference: planner (glm-5.3-flash, vision) · verifier (qwen3.8-27b, vision)
-                             · report writer (glm-5.3)
+ Vultr Serverless Inference: planner (qwen3.8-flash-next, vision) · verifier (minimax-m3.1-flash, vision)
+                             · report writer (mimo-v2.6-flash)
 ```
 
 **The agent loop (plan → dispatch → verify):**
@@ -174,7 +174,7 @@ The repo ships three demo sites, served by the egress guard at `*.consentcheck.t
 | Vultr service | Role |
 |---|---|
 | **Vultr Cloud Compute** (Ubuntu 24.04 VM) | The control plane: orchestrator, web app (Caddy → FastAPI), Docker + gVisor sandboxes, the egress guard and evidence storage. It's the single point of control, not static hosting. |
-| **Vultr Serverless Inference** (`https://api.vultrinference.com/v1`) | All LLM calls. **glm-5.3-flash** (vision) plans the click, **qwen3.8-27b** (vision, a different model family) independently verifies the screenshots, and **glm-5.3** writes the report from the computed findings. Each model call's latency and token use is recorded in the scan. |
+| **Vultr Serverless Inference** (`https://api.vultrinference.com/v1`) | All LLM calls. **qwen3.8-flash-next** (vision) plans the click, **minimax-m3.1-flash** (vision, a different model family) independently verifies the screenshots, and **mimo-v2.6-flash** writes the report from the computed findings. Each model call's latency and token use is recorded in the scan. |
 
 Model names are configurable through environment variables (`CC_AGENT_MODEL`, `CC_VERIFIER_MODEL`, `CC_REPORT_MODEL`). The live list is at `https://api.vultrinference.com/v1/models`. Without a key, ConsentCheck runs in an offline heuristic mode, so the sandbox and evidence pipeline can be tested on their own.
 

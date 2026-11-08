@@ -116,12 +116,12 @@ h2{font-size:64px;font-weight:600;letter-spacing:-.02em;line-height:1.08}
   <h2>How one audit runs</h2>
   <div style="display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:1fr;gap:32px">
     <div class="box"><span class="mono" style="color:var(--text-3)">01 · OPEN</span><b>Disposable sandbox</b><span>Chromium in a fresh gVisor container, network only through the egress guard</span></div>
-    <div class="box" style="border-color:var(--info);background:var(--info-bg)"><span class="mono" style="color:var(--info)">02 · PLAN</span><b>glm-5.3-flash</b><span>reads the screenshot and buttons, picks the control that refuses consent</span></div>
+    <div class="box" style="border-color:var(--info);background:var(--info-bg)"><span class="mono" style="color:var(--info)">02 · PLAN</span><b>qwen3.8-flash-next</b><span>reads the screenshot and buttons, picks the control that refuses consent</span></div>
     <div class="box" style="border-color:var(--review-line);background:var(--review-bg)"><span class="mono" style="color:var(--review)">03 · POLICY GATE</span><b>Deterministic check</b><span>only reject / settings / save clicks; Accept, paywall and partial opt-outs are refused</span></div>
-    <div class="box" style="border-color:var(--info);background:var(--info-bg)"><span class="mono" style="color:var(--info)">04 · VERIFY</span><b>qwen3.8-27b</b><span>a different model family compares before/after screenshots</span></div>
+    <div class="box" style="border-color:var(--info);background:var(--info-bg)"><span class="mono" style="color:var(--info)">04 · VERIFY</span><b>minimax-m3.1-flash</b><span>a different model family compares before/after screenshots</span></div>
     <div class="box"><span class="mono" style="color:var(--text-3)">05 · WATCH</span><b>Two witnesses</b><span>browser request log + egress-guard proxy log, then a reload as a returning visitor</span></div>
     <div class="box"><span class="mono" style="color:var(--text-3)">06 · VERDICT</span><b>From evidence, not AI</b><span>tracker catalogue, cookies, Google consent-mode signals → FAIL / REVIEW / PASS</span></div>
-    <div class="box" style="border-color:var(--info);background:var(--info-bg)"><span class="mono" style="color:var(--info)">07 · REPORT</span><b>glm-5.3</b><span>plain-English summary, legal context and fixes from the computed findings</span></div>
+    <div class="box" style="border-color:var(--info);background:var(--info-bg)"><span class="mono" style="color:var(--info)">07 · REPORT</span><b>mimo-v2.6-flash</b><span>plain-English summary, legal context and fixes from the computed findings</span></div>
     <div class="box" style="border-color:var(--pass-line);background:var(--pass-bg)"><span class="mono" style="color:var(--pass)">08 · HUMAN</span><b>Reviewer approves</b><span>SHA-256 manifest of every artifact, printable A4 evidence report</span></div>
   </div>
   <p style="position:absolute;left:120px;right:120px;bottom:60px;font-size:28px;line-height:1.4;color:var(--text-2)">Slow, wrong or hostile model? Replies are schema-checked, the gate overrules unsafe picks, and heuristics take over.</p>
@@ -218,7 +218,7 @@ h2{font-size:64px;font-weight:600;letter-spacing:-.02em;line-height:1.08}
   <h2>Built on Vultr</h2>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px">
     <div class="box" style="padding:40px;gap:18px"><b style="font-size:40px">Cloud Compute</b><span style="font-size:26px">The control plane: orchestrator, Caddy HTTPS, Docker + gVisor sandboxes, egress guard and evidence store on one Ubuntu 24.04 VM in Frankfurt. One script sets it up.</span></div>
-    <div class="box" style="padding:40px;gap:18px;border-color:var(--info);background:var(--info-bg)"><b style="font-size:40px">Serverless Inference</b><span style="font-size:26px">Three roles, two model families: glm-5.3-flash plans, qwen3.8-27b verifies, glm-5.3 writes the report. Latency and token use are logged for every call.</span></div>
+    <div class="box" style="padding:40px;gap:18px;border-color:var(--info);background:var(--info-bg)"><b style="font-size:40px">Serverless Inference</b><span style="font-size:26px">Three roles, three model families: qwen3.8-flash-next plans, minimax-m3.1-flash verifies, mimo-v2.6-flash writes the report. Latency and token use are logged for every call.</span></div>
   </div>
   <div style="display:flex;flex-direction:column;gap:20px;margin-top:auto">
     <div class="row" style="font-size:32px"><span>Source</span><span class="mono">github.com/Bhaskar422/consentcheck</span></div>
