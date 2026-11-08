@@ -2,6 +2,11 @@
 
 ## lablab.ai form
 
+**Links**
+- Live demo: https://consentcheck.mindgears.dev (Vultr Cloud Compute, Frankfurt; no sign-in needed)
+- Source: https://github.com/Bhaskar422/consentcheck
+- Slides: `submission/slides.pdf` · Cover image: `submission/cover.png` (1920x1080)
+
 **Project title**
 ConsentCheck: does "Reject all" actually reject?
 
@@ -24,7 +29,7 @@ The agent is deliberately conservative:
 - It treats sites that block bots, or show no banner outside the EU, as inconclusive rather than guessing.
 
 **Technology tags**
-Vultr, Vultr Serverless Inference, Vultr Cloud Compute, gVisor, Docker, Playwright, mitmproxy, FastAPI, GLM, Qwen
+Vultr, Vultr Serverless Inference, Vultr Cloud Compute, gVisor, Docker, Playwright, mitmproxy, FastAPI, Caddy, Qwen, MiniMax, MiMo
 
 **Category tags**
 Privacy, Compliance, Security, AI Agents, Browser Automation, RegTech
