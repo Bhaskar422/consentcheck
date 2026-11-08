@@ -1,0 +1,125 @@
+# 110 popular European websites for the ConsentCheck benchmark.
+# Home pages only. One visit each, EU locale (en-GB, Europe/Berlin).
+# Germany
+https://www.spiegel.de/
+https://www.zeit.de/index
+https://www.faz.net/
+https://www.sueddeutsche.de/
+https://www.bild.de/
+https://www.welt.de/
+https://www.t-online.de/
+https://www.chip.de/
+https://www.heise.de/
+https://www.golem.de/
+https://www.kicker.de/
+https://www.chefkoch.de/
+https://www.otto.de/
+https://www.idealo.de/
+https://www.check24.de/
+https://www.mobile.de/
+https://www.immobilienscout24.de/
+https://www.tchibo.de/
+https://www.thalia.de/
+https://www.hornbach.de/
+https://www.obi.de/
+https://www.dm.de/
+https://www.rossmann.de/
+https://www.douglas.de/de
+https://www.lidl.de/
+https://www.web.de/
+https://www.gmx.net/
+https://www.dhl.de/de/privatkunden.html
+https://www.ikea.com/de/de/
+https://www.trivago.de/
+# France
+https://www.lemonde.fr/
+https://www.lefigaro.fr/
+https://www.liberation.fr/
+https://www.leparisien.fr/
+https://www.20minutes.fr/
+https://www.ouest-france.fr/
+https://www.marmiton.org/
+https://www.allocine.fr/
+https://www.fnac.com/
+https://www.darty.com/
+https://www.cdiscount.com/
+https://www.leboncoin.fr/
+https://www.carrefour.fr/
+https://www.decathlon.fr/
+https://www.boulanger.com/
+https://www.laredoute.fr/
+https://www.seloger.com/
+https://www.sncf-connect.com/
+# United Kingdom
+https://www.theguardian.com/uk
+https://www.telegraph.co.uk/
+https://www.independent.co.uk/
+https://www.dailymail.co.uk/home/index.html
+https://www.thesun.co.uk/
+https://www.mirror.co.uk/
+https://www.sky.com/
+https://www.tesco.com/
+https://www.sainsburys.co.uk/
+https://www.argos.co.uk/
+https://www.johnlewis.com/
+https://www.currys.co.uk/
+https://www.boots.com/
+https://www.asos.com/
+https://www.rightmove.co.uk/
+https://www.autotrader.co.uk/
+https://www.bt.com/
+# Italy
+https://www.corriere.it/
+https://www.repubblica.it/
+https://www.gazzetta.it/
+https://www.ansa.it/
+https://www.lastampa.it/
+https://www.subito.it/
+https://www.giallozafferano.it/
+https://www.mediaworld.it/
+# Spain
+https://elpais.com/
+https://www.elmundo.es/
+https://www.marca.com/
+https://as.com/
+https://www.abc.es/
+https://www.lavanguardia.com/
+https://www.idealista.com/
+https://www.fotocasa.es/
+# Netherlands and Belgium
+https://www.nu.nl/
+https://www.telegraaf.nl/
+https://www.ad.nl/
+https://www.bol.com/nl/nl/
+https://www.marktplaats.nl/
+https://www.funda.nl/
+https://www.coolblue.nl/
+https://www.hln.be/
+https://www.standaard.be/
+# Nordics
+https://www.aftonbladet.se/
+https://www.expressen.se/
+https://www.blocket.se/
+https://www.vg.no/
+https://www.dr.dk/
+https://yle.fi/
+# Central and Eastern Europe
+https://www.onet.pl/
+https://www.wp.pl/
+https://allegro.pl/
+https://www.derstandard.at/
+https://www.krone.at/
+https://www.willhaben.at/
+https://www.idnes.cz/
+https://index.hu/
+# Ireland, Portugal, Greece
+https://www.irishtimes.com/
+https://www.independent.ie/
+https://www.rte.ie/
+https://www.publico.pt/
+https://www.kathimerini.gr/
+# Pan-European brands
+https://www.booking.com/
+https://www.ryanair.com/gb/en
+https://www.zara.com/es/en/
+https://www2.hm.com/en_gb/index.html

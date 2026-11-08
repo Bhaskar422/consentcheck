@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fjord Coffee Roasters</title>
+<style>
+  body{margin:0;font-family:Helvetica,Arial,sans-serif;background:#0f2a2e;color:#eaf2ef}
+  header{padding:24px 56px;display:flex;justify-content:space-between;align-items:center}
+  header b{font-size:22px;letter-spacing:.04em} header span{opacity:.7;font-size:14px}
+  main{padding:70px 56px;max-width:760px} h1{font-size:56px;margin:0 0 20px;line-height:1.05}
+  p{font-size:18px;line-height:1.6;opacity:.85} .btn{display:inline-block;margin-top:18px;background:#e7b85b;color:#0f2a2e;padding:14px 24px;border-radius:999px;text-decoration:none;font-weight:600}
+  #banner{position:fixed;right:24px;bottom:24px;width:380px;background:#fff;color:#123;padding:22px;border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,.35)}
+  #banner h3{margin:0 0 8px} #banner p{font-size:14px;color:#345;opacity:1;margin:0 0 14px}
+  #banner .row{display:flex;gap:10px} #banner button{flex:1;padding:12px;border-radius:10px;font-size:14px;cursor:pointer;border:1px solid #0f2a2e}
+  #yes{background:#0f2a2e;color:#fff} #no{background:#fff;color:#0f2a2e}
+</style>
+</head>
+<body>
+<header><b>FJORD</b><span>Roasted in Bergen since 2011</span></header>
+<main>
+  <h1>Small-batch coffee, roasted every Tuesday.</h1>
+  <p>Single-origin beans from farms we visit ourselves. Subscriptions ship anywhere in Europe within three days of roasting.</p>
+  <a class="btn" href="#">Start a subscription</a>
+</main>
+<div id="banner" style="display:none">
+  <h3>Cookies</h3>
+  <p>We'd like to use analytics cookies to understand how people use our site. Nothing is loaded unless you say yes.</p>
+  <div class="row"><button id="no">Reject all</button><button id="yes">Accept all</button></div>
+</div>
+<script>
+(function () {
+  function consent() { var m = document.cookie.match(/(?:^|; )fjord_consent=([^;]+)/); return m ? m[1] : null; }
+  function setConsent(v) { document.cookie = 'fjord_consent=' + v + '; max-age=15552000; path=/; SameSite=Lax'; }
+  function loadAnalytics() {
+    var i = new Image();
+    i.src = 'https://www.google-analytics.com/g/collect?v=2&tid=G-FJORD0001&gcs=G111&en=page_view';
+  }
+  var banner = document.getElementById('banner');
+  var c = consent();
+  if (!c) banner.style.display = 'block';
+  if (c === 'all') loadAnalytics();
+  document.getElementById('yes').onclick = function () { setConsent('all'); banner.style.display = 'none'; loadAnalytics(); };
+  document.getElementById('no').onclick = function () { setConsent('rejected'); banner.style.display = 'none'; };
+})();
+</script>
+</body>
+</html>

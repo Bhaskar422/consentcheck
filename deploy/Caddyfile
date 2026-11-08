@@ -1,0 +1,17 @@
+# Serves ConsentCheck over HTTPS. setup_vultr.sh replaces CC_DOMAIN with your
+# domain, or with <ip-with-dashes>.sslip.io if you have none. Caddy then gets a
+# Let's Encrypt certificate automatically and redirects http:// to https://.
+CC_DOMAIN {
+	encode gzip
+	request_body {
+		max_size 256KB
+	}
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+	reverse_proxy 127.0.0.1:8000
+}

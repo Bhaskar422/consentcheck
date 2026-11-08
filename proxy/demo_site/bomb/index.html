@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>MegaDeals · 90% off everything</title>
+<style>
+  body{margin:0;font-family:Arial,sans-serif;background:#ffef3d;color:#111}
+  h1{font-size:64px;text-align:center;margin:80px 20px 10px} p{text-align:center;font-size:20px}
+  #banner{position:fixed;bottom:0;left:0;right:0;background:#111;color:#fff;padding:20px;display:flex;justify-content:center;gap:16px;align-items:center}
+  #banner button{padding:10px 18px;font-size:15px}
+</style>
+</head>
+<body>
+<h1>MEGA DEALS 🔥</h1>
+<p>Prices this low won't last. Neither will your browser.</p>
+<div id="banner">We use cookies. <button>Reject all</button><button>Accept all</button></div>
+<script>
+// Hostile page: tries to exhaust the auditing agent's memory. The sandbox's
+// hard memory cap must kill the browser while the host and orchestrator survive.
+var hoard = [];
+setTimeout(function () {
+  setInterval(function () {
+    for (var i = 0; i < 40; i++) { hoard.push(new Float64Array(1 << 20).fill(Math.random())); }
+  }, 30);
+}, 1500);
+</script>
+</body>
+</html>

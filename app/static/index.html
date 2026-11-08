@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ConsentCheck · Does "Reject all" actually reject?</title>
+<meta name="description" content="An AI agent that clicks Reject all inside a disposable Vultr sandbox and proves which trackers still fire.">
+<script src="/theme.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="/styles.css?v=5">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 22'><rect x='1' y='1' width='20' height='20' rx='4' fill='%230b0d0e' stroke='%23e9ebec' stroke-width='1.5'/><rect x='7' y='7' width='8' height='8' rx='1' fill='%23e5483a'/></svg>">
+</head>
+<body>
+<header class="hdr">
+  <a class="brand" href="#/" aria-label="ConsentCheck home"><span class="logo" aria-hidden="true"><i></i></span><b>ConsentCheck</b></a>
+  <div class="pills" id="pills"></div>
+  <nav class="nav" aria-label="Main">
+    <a class="navlink" href="#/dashboard" id="nav-dash">Dashboard</a>
+    <a class="outlined" href="#/login" id="nav-login">Admin sign in</a>
+    <span class="who" id="nav-who" hidden><span id="nav-user">admin</span><button type="button" class="linkbtn" id="nav-logout">Sign out</button></span>
+    <button type="button" class="iconbtn" id="theme-btn" aria-label="Switch to light theme" title="Switch theme"></button>
+  </nav>
+</header>
+
+<main id="app"></main>
+
+<template id="tpl-home">
+  <div class="wrap">
+    <section class="hero">
+      <div class="hero-l">
+        <p class="eyebrow">Consent-banner forensics · ePrivacy / GDPR</p>
+        <h1>You clicked Reject all.<br><span>Did the trackers stop?</span></h1>
+        <p class="lead">Paste a website. A disposable sandbox opens it, an AI agent refuses cookies, and every request that follows is recorded as evidence you can file.</p>
+        <form class="urlform" id="scan-form">
+          <label for="url" class="sr">Website address</label>
+          <div class="urlbox">
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--text-3)" stroke-width="1.6" aria-hidden="true"><circle cx="8" cy="8" r="6.3"/><path d="M1.7 8h12.6M8 1.7c2 2 2 10.6 0 12.6M8 1.7c-2 2-2 10.6 0 12.6"/></svg>
+            <input id="url" name="url" type="text" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://example.eu">
+          </div>
+          <button type="submit" class="btn btn-primary">Audit this site
+            <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+          </button>
+        </form>
+        <p class="form-error" id="form-error" role="alert" hidden></p>
+        <div class="demos">
+          <span>Demo sites</span>
+          <button type="button" class="demo" aria-pressed="false" data-url="http://shop.consentcheck.test/"><b>Hostile shop</b><small>ignores Reject all · attacks the agent</small></button>
+          <button type="button" class="demo" aria-pressed="false" data-url="http://honest.consentcheck.test/"><b>Honest café</b><small>does it right</small></button>
+          <button type="button" class="demo" aria-pressed="false" data-url="http://bomb.consentcheck.test/"><b>Memory bomb</b><small>tries to crash the auditor</small></button>
+        </div>
+      </div>
+      <aside class="panel exhibit" aria-label="Sample exhibit">
+        <div class="exhibit-h"><span>EXHIBIT · DEMO</span><span>HOSTILE SHOP</span></div>
+        <div class="exhibit-b">
+          <div class="site" id="ex-site"></div>
+          <div class="hl">6 trackers kept running after the visitor clicked Reject all.</div>
+          <div class="exrows">
+            <div><span>Google Ads / DoubleClick</span><span>6 req after reject</span></div>
+            <div><span>Google Analytics · “granted”</span><span>2 req after reject</span></div>
+            <div><span>Meta Pixel</span><span>2 req after reject</span></div>
+            <div><span>TikTok Pixel</span><span>2 req after reject</span></div>
+          </div>
+          <div class="exhash">8 attacks on the auditor blocked · prompt injection ignored</div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="section" aria-labelledby="how">
+      <h2 id="how" class="eyebrow">How it works</h2>
+      <ol class="hair how">
+        <li><span class="n">01</span><b>Disposable sandbox</b><p>A fresh browser on an internal-only network. No secrets, no host access, hard memory and CPU limits.</p><span class="m">gVisor · 1 GB · 1 CPU · no secrets</span></li>
+        <li><span class="n">02</span><b>AI finds “Reject all”</b><p>A vision model on Vultr Serverless Inference reads the banner. A policy gate in code means it can never click “Accept”.</p><span class="m">planner · policy gate · verifier</span></li>
+        <li><span class="n">03</span><b>Two witnesses</b><p>The browser and an independent egress proxy both record every request made after the refusal.</p><span class="m">browser log + egress-guard log</span></li>
+        <li><span class="n">04</span><b>Hashed evidence</b><p>Screenshots, logs and a SHA-256 manifest. A human reviewer approves before anything is shared.</p><span class="m">sha256 manifest · human sign-off</span></li>
+      </ol>
+    </section>
+
+    <section aria-labelledby="recent">
+      <div class="list-h"><h2 id="recent">Your recent audits</h2><a href="#/dashboard" style="font-size:14px">All audits →</a></div>
+      <ul class="panel rlist" id="recent-list"><li class="none">Audits you start from this browser appear here.</li></ul>
+    </section>
+  </div>
+</template>
+
+<template id="tpl-scan">
+  <div class="wrap page">
+    <div class="scanbar">
+      <a href="#/" class="back">← New audit</a>
+      <div class="scanid"><b id="scan-url"></b><span id="scan-meta"></span></div>
+      <span class="state" id="scan-state"></span>
+    </div>
+
+    <div id="finished" class="page" style="padding:0" hidden>
+      <section class="vbanner" id="verdict" aria-label="Verdict"></section>
+      <section class="hair stats" id="stats" aria-label="Key numbers"></section>
+      <section class="panel" aria-labelledby="trk">
+        <div class="panel-h"><h2 id="trk">Trackers</h2><span class="meta">counts = requests · from network evidence, not the AI</span></div>
+        <div class="tscroll"><table class="tbl trackers" id="vendors"></table></div>
+      </section>
+      <section class="hosts" id="hosts" hidden></section>
+      <section class="meaning" aria-labelledby="mean">
+        <div class="l">
+          <h2 id="mean">What this means</h2>
+          <p class="sum" id="summary"></p>
+          <div class="note-box" role="note"><span class="eyebrow" style="letter-spacing:.1em">Legal context</span><p id="legal"></p></div>
+          <span class="by" id="report-by"></span>
+        </div>
+        <div class="r">
+          <h3>How to fix it</h3>
+          <ol class="hair fixes" id="actions"></ol>
+        </div>
+      </section>
+    </div>
+
+    <section class="run" aria-label="Sandbox run">
+      <div class="panel tl-panel">
+        <div class="panel-h"><h2>Agent timeline</h2><span class="meta" id="ev-count"></span></div>
+        <ol class="tl" id="timeline" aria-live="polite"><li class="waiting"><span class="dot c-info"></span>Provisioning a disposable sandbox…</li></ol>
+      </div>
+      <div class="side">
+        <div class="panel viewer">
+          <div class="chrome"><span class="dots" aria-hidden="true"><i></i><i></i><i></i></span><span class="addr" id="addr"></span><span class="sbx">SANDBOXED</span></div>
+          <div class="stage" id="stage" role="img" aria-label="Screenshot from the sandboxed browser"><div class="wait" id="stage-wait">The browser starts in a disposable sandbox…</div></div>
+          <div class="thumbs" role="tablist" aria-label="Screenshots" id="thumbs"></div>
+        </div>
+        <div class="panel contain" id="contain-panel">
+          <div class="panel-h" style="align-items:center">
+            <h2><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--contained)" stroke-width="1.8" aria-hidden="true"><path d="M8 1.4l5.6 2.1v4.2c0 3.3-2.3 5.8-5.6 6.9-3.3-1.1-5.6-3.6-5.6-6.9V3.5z"/></svg>Containment</h2>
+            <span id="sbx-badge"></span>
+          </div>
+          <ul class="checks" id="checks"></ul>
+          <div class="blocks">
+            <div id="killed"></div>
+            <div class="blocks-h"><h3>Blocked attack requests</h3><b id="blocked-n">0</b></div>
+            <div class="empty-box" id="blocked-empty" style="padding:12px;font-size:13px">None yet. The egress guard is watching every request.</div>
+            <ul id="blocked"></ul>
+            <p class="secrets" id="secrets" hidden></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel" id="evidence" aria-labelledby="ev" hidden>
+      <div class="panel-h" style="align-items:center"><h2 id="ev">Evidence &amp; review</h2><a class="btn btn-secondary btn-sm report-link" target="_blank" rel="noopener">Printable report</a></div>
+      <div class="evid">
+        <div class="l">
+          <span class="t3" style="font-size:13px" id="manifest-label">Evidence manifest · SHA-256</span>
+          <div class="hashbox"><code id="manifest"></code><button type="button" id="copy-hash">Copy</button></div>
+          <button type="button" class="disc" id="files-toggle" aria-expanded="false" aria-controls="files">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M6 3l5 5-5 5"/></svg><span id="files-label">Show evidence files</span>
+          </button>
+          <ul class="files" id="files" hidden></ul>
+        </div>
+        <div class="r" id="review-box"></div>
+      </div>
+    </section>
+  </div>
+</template>
+
+<template id="tpl-login">
+  <section class="signin">
+    <form class="panel" id="login-form" novalidate>
+      <div class="ttl">
+        <span class="eyebrow">Reviewers only</span>
+        <h1>Admin sign in</h1>
+        <p>Sign in to see every audit, approve reports and queue batches.</p>
+      </div>
+      <div id="login-alert"></div>
+      <label>Username<input id="login-user" autocomplete="username" required value="admin"></label>
+      <label>Password<input id="login-pass" type="password" autocomplete="current-password" required></label>
+      <button class="btn btn-primary" type="submit" id="login-btn">Sign in</button>
+      <a href="#/" class="home">Back to ConsentCheck</a>
+    </form>
+  </section>
+</template>
+
+<template id="tpl-dashboard">
+  <div class="wrap dash">
+    <div class="dash-h">
+      <div><h1>Consent audits</h1><p id="dash-sub">Loading…</p></div>
+      <span class="queue" id="dash-queue">queue idle</span>
+    </div>
+    <div class="vantage" id="vantage" hidden></div>
+    <section class="hair kpis" id="kpis" aria-label="Key figures, real sites only"></section>
+    <div class="row2">
+      <section class="panel card" style="flex:2 1 520px" aria-labelledby="vb">
+        <div class="card-h"><h2 id="vb">Verdict breakdown</h2><span id="verdict-total"></span></div>
+        <div id="vb-body" style="display:flex;flex-direction:column;gap:18px"></div>
+      </section>
+      <section class="panel card" style="flex:1 1 300px" aria-labelledby="cp">
+        <div class="card-h"><h2 id="cp"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="var(--contained)" stroke-width="1.8" aria-hidden="true"><path d="M8 1.4l5.6 2.1v4.2c0 3.3-2.3 5.8-5.6 6.9-3.3-1.1-5.6-3.6-5.6-6.9V3.5z"/></svg>Containment</h2></div>
+        <dl class="cont" id="cont"></dl>
+      </section>
+    </div>
+    <div class="row2">
+      <section class="panel card" style="flex:1 1 440px" aria-labelledby="vd">
+        <div class="card-h"><h2 id="vd">Trackers still running after Reject all</h2><span>sites · top 12</span></div>
+        <div id="vendor-bars"></div>
+      </section>
+      <section class="panel card" style="flex:1 1 440px" aria-labelledby="cr">
+        <div class="card-h"><h2 id="cr">FAIL rate by country domain</h2><span>% of conclusive · n</span></div>
+        <div id="country-bars"></div>
+      </section>
+    </div>
+    <section class="panel" aria-labelledby="all">
+      <div class="all-h">
+        <h2 id="all">All audits <span id="rows-count"></span></h2>
+        <div class="segf" role="group" aria-label="Filter by verdict" id="verdict-filter"></div>
+        <label class="search">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="var(--text-3)" stroke-width="1.8" aria-hidden="true"><circle cx="7" cy="7" r="4.8"/><path d="M10.5 10.5l3.5 3.5"/></svg>
+          <span class="sr">Search sites or vendors</span>
+          <input type="search" id="row-search" placeholder="Search sites">
+        </label>
+        <button type="button" role="switch" aria-checked="false" class="switch" id="hide-demos"><i aria-hidden="true"></i>Hide demos</button>
+      </div>
+      <div class="tablebox"><table class="tbl audits" id="audits"></table></div>
+    </section>
+    <section class="panel batch" aria-labelledby="qb">
+      <div class="l">
+        <h2 id="qb">Queue a batch of audits</h2>
+        <p>One URL per line. Each site gets its own disposable sandbox; results appear above as they finish.</p>
+      </div>
+      <form id="batch-form">
+        <label for="batch-urls" class="sr">URLs, one per line</label>
+        <textarea id="batch-urls" rows="5" spellcheck="false" placeholder="https://example.de&#10;https://example.fr&#10;https://example.it"></textarea>
+        <div class="row">
+          <button type="submit" class="btn btn-primary" id="batch-btn" disabled>Queue audits</button>
+          <span role="status" class="msg" id="batch-msg"></span>
+        </div>
+      </form>
+    </section>
+  </div>
+</template>
+
+<script src="/app.js?v=5"></script>
+</body>
+</html>

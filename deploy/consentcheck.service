@@ -1,0 +1,30 @@
+[Unit]
+Description=ConsentCheck orchestrator
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+User=consentcheck
+Group=consentcheck
+WorkingDirectory=/opt/consentcheck
+EnvironmentFile=/etc/consentcheck.env
+Environment=CC_RUNS_DIR=/opt/consentcheck/runs
+# Bound to localhost only; Caddy is the public entry point. Containers cannot reach it.
+ExecStart=/opt/consentcheck/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 --proxy-headers
+Restart=always
+RestartSec=3
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/opt/consentcheck/runs
+PrivateTmp=true
+PrivateDevices=true
+RestrictSUIDSGID=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+MemoryMax=1G
+# docker CLI keeps its config here instead of the (unused) home directory
+Environment=DOCKER_CONFIG=/opt/consentcheck/runs/.docker
+
+[Install]
+WantedBy=multi-user.target
