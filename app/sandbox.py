@@ -47,6 +47,24 @@ async def _run(*args, check=True, timeout=60):
     return proc.returncode, out.decode(), err.decode()
 
 
+async def remove_orphans() -> int:
+    """Remove sandbox containers and networks left behind when the orchestrator was
+    stopped mid-audit (a restart kills the audit before its teardown runs). Call at
+    startup only, when no audit of this process can be running."""
+    removed = 0
+    _, out, _ = await _run("docker", "ps", "-aq", "--filter", "name=^cc-(proxy|sbx)-[0-9a-f]+$", check=False)
+    ids = out.split()
+    if ids:
+        await _run("docker", "rm", "-f", *ids, check=False)
+        removed += len(ids)
+    _, out, _ = await _run("docker", "network", "ls", "-q", "--filter", "name=^cc-net-[0-9a-f]+$", check=False)
+    nets = out.split()
+    if nets:
+        await _run("docker", "network", "rm", *nets, check=False)
+        removed += len(nets)
+    return removed
+
+
 class Sandbox:
     def __init__(self, scan_id: str, evidence_dir: Path):
         self.id = scan_id

@@ -49,10 +49,10 @@ def render_report(scan: dict) -> str:
     if appr and appr.get("decision") == "approved":
         draft_banner = ""
     elif appr:
-        draft_banner = ('<div class="draft rej"><b>REJECTED BY REVIEWER</b><span>A human reviewer rejected this automated '
+        draft_banner = ('<div class="draftbar rej"><b>REJECTED BY REVIEWER</b><span>A human reviewer rejected this automated '
                         'result. Do not rely on it.</span></div>')
     else:
-        draft_banner = ('<div class="draft"><b>DRAFT · NOT YET REVIEWED</b><span>Automated result. A human reviewer has not '
+        draft_banner = ('<div class="draftbar"><b>DRAFT · NOT YET REVIEWED</b><span>Automated result. A human reviewer has not '
                         'approved it yet, so it must not be shared or relied on.</span></div>')
 
     sub = []
@@ -153,7 +153,7 @@ dl.meta dt{{color:var(--text-2)}} dl.meta dd{{margin:0;font-family:var(--font-mo
 h2.eb{{margin:0;font:600 11px var(--font-mono);letter-spacing:.14em;color:var(--text-2)}}
 h2.sec{{margin:0;font-size:20px;font-weight:600}}
 .blk{{display:flex;flex-direction:column;gap:10px}}
-.draft{{display:flex;flex-direction:column;gap:4px;padding:12px 16px;border:2px dashed var(--review);border-radius:6px;color:var(--review);font-family:var(--font-mono)}} .draft b{{font-size:14px;letter-spacing:.12em}} .draft span{{font-family:var(--font-ui);font-size:13px;color:var(--text-2)}} .draft.rej{{border-color:var(--fail);color:var(--fail)}}
+.draftbar{{display:flex;flex-direction:column;gap:4px;padding:12px 16px;border:2px dashed var(--review);border-radius:6px;color:var(--review);font-family:var(--font-mono)}} .draftbar b{{font-size:14px;letter-spacing:.12em}} .draftbar span{{font-family:var(--font-ui);font-size:13px;color:var(--text-2)}} .draftbar.rej{{border-color:var(--fail);color:var(--fail)}}
 .stats{{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));border:1px solid var(--line-strong)}}
 .stats div{{padding:12px;border-right:1px solid var(--line)}} .stats div:last-child{{border-right:0}}
 .stats b{{display:block;font:600 28px var(--font-mono)}} .stats span{{font-size:11.5px;line-height:1.3;color:var(--text-2)}}

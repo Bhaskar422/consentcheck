@@ -22,13 +22,26 @@ FAILURE_WINDOW = 300
 ADMIN_USER = os.environ.get("CC_ADMIN_USER", "admin")
 _SECRET = (os.environ.get("CC_SESSION_SECRET") or secrets.token_hex(32)).encode()
 _failures: dict[str, list[float]] = {}
-_revoked: dict[str, int] = {}  # signature -> expiry, for sessions ended by logout
 _password: str | None = None
+# Session generation, persisted in <runs>/.session_gen: logout increments it, which
+# invalidates every session (there is one admin), also across service restarts.
+_gen_file: Path | None = None
+_gen = 0
+
+
+def _load_gen(runs_dir: Path) -> None:
+    global _gen_file, _gen
+    _gen_file = runs_dir / ".session_gen"
+    try:
+        _gen = int(_gen_file.read_text().strip() or 0)
+    except (OSError, ValueError):
+        _gen = 0
 
 
 def init(runs_dir: Path) -> str:
     """Load or create the admin password. Returns where it came from (for the log)."""
     global _password
+    _load_gen(runs_dir)
     env = os.environ.get("CC_ADMIN_PASSWORD", "").strip()
     if env:
         _password = env
@@ -47,7 +60,7 @@ def init(runs_dir: Path) -> str:
 def _sign(payload: str) -> str:
     # The key includes the current password, so changing CC_ADMIN_PASSWORD (or
     # deleting .admin_password) and restarting invalidates every existing session.
-    key = _SECRET + hashlib.sha256((_password or "").encode()).digest()
+    key = _SECRET + hashlib.sha256(f"{_password or ''}|{_gen}".encode()).digest()
     return hmac.new(key, payload.encode(), hashlib.sha256).hexdigest()
 
 
@@ -66,19 +79,22 @@ def session_user(request: Request) -> str | None:
         return None
     if not exp.isdigit() or int(exp) < time.time():
         return None
-    if sig in _revoked:
-        return None
     return user
 
 
 def revoke(request: Request) -> None:
-    """Logout: the cookie stops working on the server too, not just in this browser."""
-    parts = request.cookies.get(COOKIE, "").split("|")
-    if len(parts) == 3 and parts[1].isdigit() and session_user(request):
-        now = time.time()
-        for k in [k for k, e in _revoked.items() if e < now]:
-            _revoked.pop(k, None)
-        _revoked[parts[2]] = int(parts[1])
+    """Logout: ends every admin session on the server, not just this browser's cookie,
+    and keeps it ended after a restart."""
+    global _gen
+    if not session_user(request):
+        return
+    _gen += 1
+    if _gen_file is not None:
+        _gen_file.parent.mkdir(parents=True, exist_ok=True)
+        tmp = _gen_file.with_suffix(".tmp")
+        tmp.write_text(str(_gen))
+        tmp.chmod(0o600)
+        tmp.replace(_gen_file)
 
 
 def require_admin(request: Request) -> str:

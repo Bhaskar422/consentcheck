@@ -9,7 +9,7 @@ Built for the **Vultr Agent Rush Hackathon, Challenge 1: Blast Radius Zero**.
 | | |
 |---|---|
 | Live demo | https://consentcheck.mindgears.dev (Vultr Cloud Compute, Frankfurt, gVisor) |
-| Demo video | `<link>` |
+| Demo video | [submission/demo_4k.mp4](submission/demo_4k.mp4) (4K, narrated, 3:40) |
 | Source | https://github.com/Bhaskar422/consentcheck |
 | Track | Blast Radius Zero, Pattern B (sandboxed browser use) |
 
@@ -34,7 +34,7 @@ ConsentCheck automates that check and produces evidence a privacy officer can fi
 ## Security
 
 - **Transport:** HTTPS through Caddy, with HSTS. Admin sessions use an HMAC-signed `HttpOnly`, `SameSite=Strict` cookie, plus an Origin check on every POST.
-- **Abuse limits:** visitors get up to 10 audits in progress per IP (30 in total across visitors), queued behind a fixed number of concurrent sandboxes. Request bodies are capped. Failed logins are throttled (5 per 5 minutes).
+- **Abuse limits:** visitors get up to 10 audits in progress per IP (IPv6 grouped by /64; 30 in total across visitors). Only a visitor's first 2 audits use the fast lane; the rest, and admin batches, wait in a separate batch lane, so one visitor cannot make others queue. Leftover sandboxes from an interrupted run are removed at startup. Request bodies are capped. Failed logins are throttled (5 per 5 minutes).
 - **Untrusted content:**
   - Everything a scanned site controls (titles, labels, URLs, hosts) is HTML-escaped.
   - A strict Content-Security-Policy is set.
@@ -156,7 +156,7 @@ A website being audited is untrusted code by definition. It runs JavaScript in o
 | Lifecycle | Created per scan and destroyed after it, then the teardown is verified with `docker ps` / `docker network ls`. |
 | Prompt-injection resistance | Page text is marked as untrusted data in prompts. A deterministic policy gate forbids accept clicks, and verdicts come from network evidence, not model output. |
 | Untrusted model output | Every model reply is coerced to a fixed schema (types, lengths, allowed values) before use. Malformed replies, timeouts and API errors fall back to heuristics and a template report, so a bad model call never breaks or skews an audit. Tested against a fake endpoint that returns junk, wrong types, HTTP 503 and a "malicious" planner that picks Accept all (the policy gate refuses it). |
-| Admin access and data | Signed HttpOnly session cookie, login throttling, server-side logout, and sessions are invalidated when the admin password changes. Unapproved audit evidence is deleted after 30 days (`CC_RETENTION_DAYS`). |
+| Admin access and data | Signed HttpOnly session cookie, login throttling, server-side logout that persists across restarts, and sessions are invalidated when the admin password changes. Unapproved audit evidence is deleted after 30 days (`CC_RETENTION_DAYS`). |
 
 ### The containment moments (see the demo video)
 

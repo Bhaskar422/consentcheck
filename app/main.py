@@ -1,6 +1,7 @@
 """ConsentCheck web app: API + static UI + printable reports."""
 
 import asyncio
+import ipaddress
 import logging
 import re
 from contextlib import asynccontextmanager
@@ -14,7 +15,7 @@ from pydantic import BaseModel, Field
 
 from . import auth, dashboard, llm, orchestrator
 from .report import render_report
-from .sandbox import RUNTIME
+from .sandbox import RUNTIME, remove_orphans
 
 STATIC = Path(__file__).parent / "static"
 SAFE_NAME = re.compile(r"^[\w.\-]+$")
@@ -34,6 +35,12 @@ log = logging.getLogger("uvicorn.error")
 @asynccontextmanager
 async def lifespan(_app):
     orchestrator.load_scans()
+    try:
+        n = await remove_orphans()
+        if n:
+            log.warning("removed %d sandbox containers/networks left over from a previous run", n)
+    except Exception:  # docker unavailable: audits will fail loudly later, startup should not
+        log.exception("could not clean up leftover sandboxes")
     log.info("ConsentCheck admin user '%s', password %s", auth.ADMIN_USER, auth.init(orchestrator.RUNS_DIR))
     yield
 
@@ -133,9 +140,23 @@ def _pending(visitors_only=False):
                and not (visitors_only and _owner.get(sid) == "admin"))
 
 
+MAX_FAST_PER_CLIENT = 2  # a visitor's first audits in progress get the fast lane
+
+
 def _launch(url, client="", batch=False):
-    orchestrator.prune_old_runs()
+    if orchestrator.prune_old_runs():
+        for sid in [sid for sid in _owner if sid not in orchestrator.SCANS]:
+            _owner.pop(sid, None)
+    if not batch and client != "admin":
+        # One visitor cannot occupy the fast lane: beyond their first two audits in
+        # progress, the rest wait in the batch lane, so other people never queue
+        # behind one visitor's ten slow pages.
+        fast = sum(1 for sid, ip in _owner.items() if ip == client
+                   and orchestrator.SCANS.get(sid, {}).get("status") in ("queued", "running")
+                   and not orchestrator.SCANS[sid].get("batch_lane"))
+        batch = fast >= MAX_FAST_PER_CLIENT
     scan = orchestrator.new_scan(url)
+    scan["batch_lane"] = batch
     _owner[scan["id"]] = client
     task = asyncio.create_task(orchestrator.run_scan(scan, batch=batch))
     _tasks.add(task)
@@ -144,7 +165,18 @@ def _launch(url, client="", batch=False):
 
 
 def _client(request: Request) -> str:
-    return request.client.host if request.client else "?"
+    """Visitor key for rate limits. IPv6 clients are grouped by /64, since one
+    connection usually controls a whole /64 and could rotate addresses in it."""
+    host = request.client.host if request.client else "?"
+    try:
+        ip = ipaddress.ip_address(host)
+    except ValueError:
+        return host
+    if ip.version == 6:
+        if ip.ipv4_mapped:
+            return str(ip.ipv4_mapped)
+        return str(ipaddress.ip_network(f"{ip}/64", strict=False))
+    return str(ip)
 
 
 def _check_visitor_quota(request: Request, n: int) -> None:

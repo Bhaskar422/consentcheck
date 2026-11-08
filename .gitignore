@@ -8,3 +8,7 @@ runs/
 # local planning notes
 TODO.md
 DESIGN_PROMPT.md
+
+# demo video drafts (the final 4K video, submission/demo_4k.mp4, is committed)
+submission/*.mp4
+!submission/demo_4k.mp4
