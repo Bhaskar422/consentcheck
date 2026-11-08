@@ -126,8 +126,11 @@ async def me(request: Request):
 
 
 # ------------------------------------------------------------------ scans
-def _pending():
-    return sum(1 for s in orchestrator.SCANS.values() if s["status"] in ("queued", "running"))
+def _pending(visitors_only=False):
+    """Audits queued or running. visitors_only leaves out the admin's batches, which
+    run in their own lane and must not lock visitors out."""
+    return sum(1 for sid, s in orchestrator.SCANS.items() if s["status"] in ("queued", "running")
+               and not (visitors_only and _owner.get(sid) == "admin"))
 
 
 def _launch(url, client="", batch=False):
@@ -155,7 +158,7 @@ def _check_visitor_quota(request: Request, n: int) -> None:
         free = max(0, MAX_PER_CLIENT - mine)
         raise HTTPException(429, f"You can have {MAX_PER_CLIENT} audits in progress at once"
                                  + (f"; {free} more can start now." if free else ". Wait for some to finish."))
-    if _pending() + n > MAX_PENDING:
+    if _pending(visitors_only=True) + n > MAX_PENDING:
         raise HTTPException(429, "The auditor is busy. Try again in a minute.")
 
 
