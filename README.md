@@ -66,7 +66,7 @@ The admin login exists for the human reviewer only:
 
 Login uses a single admin account (`CC_ADMIN_USER` / `CC_ADMIN_PASSWORD`). The session is an HMAC-signed, HttpOnly, SameSite=Strict cookie, and failed logins are throttled. If no password is set, a random one is generated at first start and stored in `runs/.admin_password` (mode 600).
 
-### Benchmark: 113 European websites
+### Benchmark: 112 European websites
 
 [`sites/eu_sites.txt`](sites/eu_sites.txt) lists 113 popular sites from 20 countries: news, retail, travel and classifieds. To queue them all, run:
 
@@ -76,17 +76,17 @@ Login uses a single admin account (`CC_ADMIN_USER` / `CC_ADMIN_PASSWORD`). The s
 
 Each result describes **one automated visit** to the home page, so treat it as an observation that a human should review, not a legal finding.
 
-**First run (8 Nov 2026, from a scanner outside the EU, no AI key, heuristic mode):**
+**Frankfurt run (9 Nov 2026, Vultr Cloud Compute in Frankfurt, gVisor, Vultr Serverless Inference):**
 
 | Result | Sites |
 |---|---|
-| FAIL | 13 (trackers after Reject all, or before any choice) |
-| REVIEW | 5 (including 1 consent-or-pay site that tracked after a settings refusal) |
-| PASS | 11 |
-| INCONCLUSIVE | 83: 35 blocked the automated browser, 35 showed no banner to a non-EU visitor, 7 consent-or-pay walls, and the rest timed out or had no free refusal option |
+| FAIL | 25 (trackers after Reject all, or before any choice) |
+| REVIEW | 5 |
+| PASS | 20 |
+| INCONCLUSIVE | 61: 41 blocked the automated browser (bot walls are common for datacenter IPs), 14 consent-or-pay walls, and the rest timed out or had no free refusal option |
 | CONTAINED | 1 (a heavy page crashed the browser inside its memory cap) |
 
-Of the 29 sites where a verdict was possible, 13 (45%) failed. Google Ads/DoubleClick (8 sites) and Google Analytics (7 sites) were the vendors most often still running after Reject all.
+Of the 50 sites where a verdict was possible, 25 (50%) failed: 10 kept tracking after Reject all and 25 tracked before the visitor chose anything. Google Ads/DoubleClick (8 sites) and Google Analytics (5 sites) were the vendors most often still running. All 122 sandboxes of the run were destroyed and verified; the AI made 269 calls with an average latency of 3.1 s.
 
 ConsentCheck is deliberately conservative:
 - It never clicks a "Reject and subscribe" button.

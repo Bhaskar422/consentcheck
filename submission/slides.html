@@ -101,14 +101,14 @@ h2{font-size:64px;font-weight:600;letter-spacing:-.02em;line-height:1.08}
 
 <!-- 03 Problem ---------------------------------------------------------- -->
 <section style="padding:120px;display:grid;grid-template-columns:auto 1fr;gap:100px;align-items:center">
-  <div class="mono" style="font-size:380px;font-weight:600;line-height:.85;letter-spacing:-.05em;color:var(--fail)">45%</div>
+  <div class="mono" style="font-size:380px;font-weight:600;line-height:.85;letter-spacing:-.05em;color:var(--fail)">50%</div>
   <div style="display:flex;flex-direction:column;gap:36px">
     <span class="tag fail" style="align-self:flex-start"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="8" cy="8" r="6.4"/><path d="M5.6 5.6l4.8 4.8M10.4 5.6l-4.8 4.8"/></svg>FAIL</span>
     <h2 style="font-size:58px;line-height:1.12">of conclusive audits failed: trackers ran after Reject all, or before the visitor chose anything.</h2>
-    <p style="font-size:32px;line-height:1.4;color:var(--text-2)">13 of 29 conclusive audits across 113 real European news, retail and travel sites. 10 kept tracking after Reject all; 12 tracked before any choice.</p>
+    <p style="font-size:32px;line-height:1.4;color:var(--text-2)">25 of 50 conclusive audits across 112 real European news, retail and travel sites, scanned from Vultr Frankfurt. 10 kept tracking after Reject all; 25 tracked before any choice.</p>
     <p style="font-size:26px;line-height:1.4;color:var(--text-3)">ePrivacy Art. 5(3) requires consent before tracking. GDPR Art. 7 requires that refusing is as easy as accepting. Today privacy teams check this by hand in DevTools.</p>
   </div>
-  <div class="foot"><span>First benchmark run, heuristic mode · 83 inconclusive audits not counted</span><span>03</span></div>
+  <div class="foot"><span>Frankfurt run with Vultr AI · 61 inconclusive audits not counted</span><span>03</span></div>
 </section>
 
 <!-- 04 How the agent works ---------------------------------------------- -->
@@ -171,26 +171,26 @@ h2{font-size:64px;font-weight:600;letter-spacing:-.02em;line-height:1.08}
     <div class="blk"><span>metadata.google.internal</span><em>BLOCKED</em></div>
     <div class="blk"><span>10.0.0.1 (private network)</span><em>BLOCKED</em></div>
     <div class="blk"><span>127.0.0.1:8000 (the auditor)</span><em>BLOCKED</em></div>
-    <div class="mono" style="font-size:26px;color:var(--pass);padding-top:8px">sandbox destroyed and verified ✓ · 145 / 145 audits</div>
+    <div class="mono" style="font-size:26px;color:var(--pass);padding-top:8px">sandbox destroyed and verified ✓ · 122 / 122 audits</div>
   </div>
 </section>
 
 <!-- 07 Benchmark -------------------------------------------------------- -->
 <section style="padding:100px 120px;display:flex;flex-direction:column;gap:52px">
-  <h2>113 real European sites</h2>
+  <h2>112 real European sites, from Frankfurt</h2>
   <div>
     <div style="display:flex;height:96px;gap:4px;border-radius:8px;overflow:hidden">
-      <div style="flex:13;background:var(--fail-solid)"></div>
+      <div style="flex:25;background:var(--fail-solid)"></div>
       <div style="flex:5;background:var(--review)"></div>
-      <div style="flex:11;background:var(--pass)"></div>
-      <div style="flex:83;background:repeating-linear-gradient(45deg,#2a3034 0 10px,#22272a 10px 20px)"></div>
+      <div style="flex:20;background:var(--pass)"></div>
+      <div style="flex:61;background:repeating-linear-gradient(45deg,#2a3034 0 10px,#22272a 10px 20px)"></div>
       <div style="flex:1;min-width:10px;background:var(--contained)"></div>
     </div>
     <div style="display:flex;gap:44px;margin-top:28px;flex-wrap:wrap">
-      <span class="tag sm fail">FAIL 13</span>
+      <span class="tag sm fail">FAIL 25</span>
       <span class="tag sm review">REVIEW 5</span>
-      <span class="tag sm pass">PASS 11</span>
-      <span class="tag sm inc">INCONCLUSIVE 83</span>
+      <span class="tag sm pass">PASS 20</span>
+      <span class="tag sm inc">INCONCLUSIVE 61</span>
       <span class="tag sm contained">CONTAINED 1</span>
     </div>
   </div>
@@ -198,19 +198,19 @@ h2{font-size:64px;font-weight:600;letter-spacing:-.02em;line-height:1.08}
     <div>
       <div class="eyebrow" style="font-size:22px;margin-bottom:16px">Most common trackers on failing sites</div>
       <div class="row"><span>Google Ads / DoubleClick</span><span class="mono">8 sites</span></div>
-      <div class="row"><span>Google Analytics</span><span class="mono">7 sites</span></div>
-      <div class="row"><span>ID5</span><span class="mono">3 sites</span></div>
-      <div class="row"><span>Amazon Ads · Criteo · PubMatic · Lotame</span><span class="mono">2 each</span></div>
+      <div class="row"><span>Google Analytics</span><span class="mono">5 sites</span></div>
+      <div class="row"><span>ID5 · Amazon Ads · Lotame · Comscore</span><span class="mono">3 each</span></div>
+      
     </div>
     <div>
       <div class="eyebrow" style="font-size:22px;margin-bottom:16px">Conservative by design</div>
-      <div class="row"><span>Bot walls, not judged</span><span class="mono">35</span></div>
-      <div class="row"><span>No banner shown outside the EU</span><span class="mono">35</span></div>
-      <div class="row"><span>Consent-or-pay, never clicked</span><span class="mono">7</span></div>
+      <div class="row"><span>Bot walls, not judged</span><span class="mono">41</span></div>
+      <div class="row"><span>Vultr AI calls · avg latency</span><span class="mono">269 · 3.1 s</span></div>
+      <div class="row"><span>Consent-or-pay, never clicked</span><span class="mono">14</span></div>
       <div class="row"><span>Library-only loads → medium, not FAIL</span><span class="mono">rule</span></div>
     </div>
   </div>
-  <div class="foot"><span>First run from outside the EU; re-run from Vultr Frankfurt shows each site’s EU banner</span><span>07</span></div>
+  <div class="foot"><span>One automated home-page visit per site · observations for human review, not legal findings</span><span>07</span></div>
 </section>
 
 <!-- 08 Vultr + links ---------------------------------------------------- -->
