@@ -17,8 +17,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from app import llm  # noqa: E402
 
 
-# A 32x32 solid blue JPEG (1.1 KB), so the check needs no image library.
-BLUE_JPEG = (
+# A 32x32 solid orange JPEG (845 bytes), so the check needs no image library.
+TEST_JPEG = (
     "/9j/4AAQSkZJRgABAQAASABIAAD/4QCARXhpZgAATU0AKgAAAAgABAEaAAUAAAABAAAAPgEbAAUAAAABAAAARgEoAAMAAAAB"
     "AAIAAIdpAAQAAAABAAAATgAAAAAAAABIAAAAAQAAAEgAAAABAAOgAQADAAAAAQABAACgAgAEAAAAAQAAACCgAwAEAAAAAQAA"
     "ACAAAAAA/+0AOFBob3Rvc2hvcCAzLjAAOEJJTQQEAAAAAAAAOEJJTQQlAAAAAAAQ1B2M2Y8AsgTpgAmY7PhCfv/AABEIACAA"
@@ -48,7 +48,7 @@ async def main() -> int:
     available = sorted(m.get("id", "") for m in r.json().get("data", []))
     print(f"{len(available)} models available:\n  " + "\n  ".join(available))
 
-    img = BLUE_JPEG
+    img = TEST_JPEG
     for role, model, vision in (("planner", llm.AGENT_MODEL, True), ("verifier", llm.VERIFIER_MODEL, True),
                                 ("report", llm.REPORT_MODEL, False)):
         if model not in available:
@@ -62,8 +62,12 @@ async def main() -> int:
             content = 'Reply with JSON only: {"ok": true}'
         try:
             text, meta = await llm.chat(model, [{"role": "system", "content": "You reply with JSON only."},
-                                                {"role": "user", "content": content}], max_tokens=200)
+                                                {"role": "user", "content": content}], max_tokens=1500)
             parsed = llm.extract_json(text)
+            if vision and "orange" not in str(parsed).lower():
+                print(f"\n[FAIL] {role}: {model} answered {parsed} for an orange image: it cannot see images.")
+                ok = False
+                continue
             print(f"\n[OK]   {role}: {model} replied in {meta['latency_ms']} ms "
                   f"({meta['prompt_tokens']} in / {meta['completion_tokens']} out): {parsed}")
         except llm.LLMError as e:

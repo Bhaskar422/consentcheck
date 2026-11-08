@@ -15,9 +15,9 @@ BASE_URL = os.environ.get("VULTR_INFERENCE_BASE_URL", "https://api.vultrinferenc
 API_KEY = os.environ.get("VULTR_INFERENCE_API_KEY", "").strip()
 
 # Two different model families: one plans, the other independently verifies.
-AGENT_MODEL = os.environ.get("CC_AGENT_MODEL", "glm-5.3-flash")
-VERIFIER_MODEL = os.environ.get("CC_VERIFIER_MODEL", "qwen3.8-27b")
-REPORT_MODEL = os.environ.get("CC_REPORT_MODEL", "glm-5.3")
+AGENT_MODEL = os.environ.get("CC_AGENT_MODEL", "qwen3.8-flash-next")
+VERIFIER_MODEL = os.environ.get("CC_VERIFIER_MODEL", "minimax-m3.1-flash")
+REPORT_MODEL = os.environ.get("CC_REPORT_MODEL", "mimo-v2.6-flash")
 TIMEOUT = float(os.environ.get("CC_LLM_TIMEOUT", "30"))
 
 

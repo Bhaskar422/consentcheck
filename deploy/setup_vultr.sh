@@ -88,9 +88,9 @@ CC_SANDBOX_RUNTIME=runsc
 CC_SELF_HOSTS=$IP,$DOMAIN
 # Set to 1 only if this VM is in an EU region (e.g. Frankfurt); see README.
 CC_EU_VANTAGE=0
-CC_AGENT_MODEL=glm-5.3-flash
-CC_VERIFIER_MODEL=qwen3.8-27b
-CC_REPORT_MODEL=glm-5.3
+CC_AGENT_MODEL=qwen3.8-flash-next
+CC_VERIFIER_MODEL=minimax-m3.1-flash
+CC_REPORT_MODEL=mimo-v2.6-flash
 CC_MAX_CONCURRENT=2
 EOF
   chmod 600 $ENV_FILE

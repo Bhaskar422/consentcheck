@@ -253,7 +253,7 @@ async def llm_choose(scan, state, step, allowed):
     text, meta = await llm.chat(llm.AGENT_MODEL, [
         {"role": "system", "content": AGENT_SYSTEM},
         {"role": "user", "content": content},
-    ], max_tokens=700)
+    ], max_tokens=1500)  # room for models that reason before answering
     scan["ai"]["calls"].append({"role": "planner", **meta})
     return clean_proposal(llm.extract_json(text)), meta
 
@@ -266,7 +266,7 @@ async def llm_verify(scan, before_b64, after_b64):
     text, meta = await llm.chat(llm.VERIFIER_MODEL, [
         {"role": "system", "content": VERIFIER_SYSTEM},
         {"role": "user", "content": content},
-    ], max_tokens=500)
+    ], max_tokens=1200)
     scan["ai"]["calls"].append({"role": "verifier", **meta})
     return clean_verdict(llm.extract_json(text)), meta
 
@@ -289,7 +289,7 @@ async def llm_report(scan, findings):
     text, meta = await llm.chat(llm.REPORT_MODEL, [
         {"role": "system", "content": REPORT_SYSTEM},
         {"role": "user", "content": json.dumps(compact)},
-    ], max_tokens=900, temperature=0.2)
+    ], max_tokens=2000, temperature=0.2)
     scan["ai"]["calls"].append({"role": "reporter", **meta})
     summary = clean_summary(llm.extract_json(text))
     if summary is None:
