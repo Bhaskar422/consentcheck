@@ -34,7 +34,7 @@ ConsentCheck automates that check and produces evidence a privacy officer can fi
 ## Security
 
 - **Transport:** HTTPS through Caddy, with HSTS. Admin sessions use an HMAC-signed `HttpOnly`, `SameSite=Strict` cookie, plus an Origin check on every POST.
-- **Abuse limits:** anonymous users get 2 audits in progress per IP and 6 in total. Request bodies are capped. Failed logins are throttled (5 per 5 minutes).
+- **Abuse limits:** visitors get up to 10 audits in progress per IP (30 in total across visitors), queued behind a fixed number of concurrent sandboxes. Request bodies are capped. Failed logins are throttled (5 per 5 minutes).
 - **Untrusted content:**
   - Everything a scanned site controls (titles, labels, URLs, hosts) is HTML-escaped.
   - A strict Content-Security-Policy is set.
@@ -42,9 +42,9 @@ ConsentCheck automates that check and produces evidence a privacy officer can fi
   - The report model never sees text chosen by the site.
 - **Containment:** see [Containment](#containment-blast-radius-zero). The guard's evidence log lives in its own directory and is copied out without following links. Logs are capped so a page can't fill the disk.
 
-## Admin dashboard
+## Dashboard (public) and what the admin login is for
 
-Signed-in admins get a dashboard across every audit:
+No account is needed to audit sites (one at a time, or up to 10 at once) or to open the dashboard. The dashboard shows figures across every audit:
 - the FAIL rate
 - sites that kept tracking after Reject all
 - sites that tracked before any choice
@@ -52,9 +52,17 @@ Signed-in admins get a dashboard across every audit:
 - the top vendors still running
 - FAIL rate by country
 - containment totals (attacks blocked, sandboxes destroyed)
-- a filterable table of all audits
+- a filterable table of audits
 
-Admins can also queue a batch of sites and approve reports. Visitors can still run audits and open their own results, but the full list and the review controls need an admin login.
+The figures are anonymous aggregates. The table names a real site only after a human reviewer has approved its audit, so no company is publicly named on an unchecked automated result. Visitors also see their own audits there.
+
+The admin login exists for the human reviewer only:
+
+| Needs admin sign-in | Why |
+|---|---|
+| Approve or reject a report | Human-in-the-loop sign-off. Approval publishes the site by name on the dashboard; unapproved reports carry a "Draft, not yet reviewed" banner. |
+| See every audit, including unreviewed real-site results | Unchecked findings about named companies stay private. |
+| Batches of up to 200 sites | Visitors get 10, so one visitor cannot fill the queue. |
 
 Login uses a single admin account (`CC_ADMIN_USER` / `CC_ADMIN_PASSWORD`). The session is an HMAC-signed, HttpOnly, SameSite=Strict cookie, and failed logins are throttled. If no password is set, a random one is generated at first start and stored in `runs/.admin_password` (mode 600).
 
@@ -205,12 +213,13 @@ export VULTR_INFERENCE_API_KEY=...   # optional
 | Method | Path | |
 |---|---|---|
 | `POST` | `/api/scans` `{"url": "..."}` | Start an audit, returns `{"id"}` |
+| `POST` | `/api/scans/batch` `{"urls": [...]}` | Start several audits: up to 10 for visitors, 200 for the admin |
+| `GET` | `/api/stats?mine=id,id` | Public dashboard: aggregates, approved audits and your own |
 | `GET` | `/api/scans/{id}?since=n` | Live status, events, findings, evidence |
 | `GET` | `/api/scans/{id}/files/{name}` | Screenshots, `requests.json`, `proxy_log.jsonl`, `findings.json`, `manifest.json`, … |
 | `POST` | `/api/scans/{id}/approve` `{"reviewer","decision","note"}` | Human review, hash-stamped (admin) |
 | `POST` | `/api/auth/login` `{"user","password"}` | Admin sign-in, sets a signed session cookie |
 | `GET` | `/api/admin/stats` | Dashboard aggregates and all audits (admin) |
-| `POST` | `/api/admin/batch` `{"urls": [...]}` | Queue up to 200 audits (admin) |
 | `GET` | `/report/{id}` | Printable evidence report |
 
 ## Project layout

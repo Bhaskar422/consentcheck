@@ -423,3 +423,14 @@ table.audits{min-width:1040px;border-collapse:separate;border-spacing:0}
 .batch .row{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
 .batch .msg{font-family:var(--font-mono);font-size:13px;color:var(--pass)}
 .batch .msg.err{color:var(--fail)}
+
+/* public dashboard + multi-site audits */
+.pubnote{border-color:var(--line-strong);background:var(--surface)}
+.pubnote svg{color:var(--info)}
+.pubnote a{white-space:nowrap}
+.multi{margin:10px 0 0;display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;font-size:14px}
+.multi a{font-weight:500}
+.multi span{color:var(--text-3);font-size:13px}
+.mine-b{margin-left:8px;padding:1px 6px;border:1px solid var(--info);border-radius:var(--r1);font-family:var(--font-mono);font-size:10.5px;color:var(--info)}
+.why-admin{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;font-size:14px;line-height:1.5;color:var(--text-2)}
+.why-admin b{color:var(--text);font-weight:600}

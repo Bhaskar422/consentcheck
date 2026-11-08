@@ -17,7 +17,7 @@ The verdict is computed from evidence, not from the AI. The browser's own reques
 
 Containment is the product. A website under audit is untrusted code, so our demo shop attacks the auditor. It hides a prompt injection in its banner and tries to reach cloud metadata (169.254.169.254), internal IPs and the orchestrator itself. The policy gate ignores the injection and the egress guard blocks and logs every probe. A memory-bomb page crashes only its own sandbox, while the host and other scans keep running. After every scan the sandbox is destroyed and the teardown is verified.
 
-It works on real sites. An admin dashboard runs batch audits and shows the results. In a first benchmark of 113 popular European websites, 13 of the 29 sites where a verdict was possible kept tracking after Reject all or before any choice. Google Ads and Google Analytics were the vendors most often still running.
+It works on real sites. Anyone can audit up to 10 sites at once and open a public dashboard; a human reviewer approves each real-site result before the site is named publicly. In a first benchmark of 113 popular European websites, 13 of the 29 sites where a verdict was possible kept tracking after Reject all or before any choice. Google Ads and Google Analytics were the vendors most often still running.
 
 The agent is deliberately conservative:
 - It skips "reject and subscribe" paywall buttons and single-vendor opt-outs.

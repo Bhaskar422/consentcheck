@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="/styles.css?v=5">
+<link rel="stylesheet" href="/styles.css?v=6">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 22 22'><rect x='1' y='1' width='20' height='20' rx='4' fill='%230b0d0e' stroke='%23e9ebec' stroke-width='1.5'/><rect x='7' y='7' width='8' height='8' rx='1' fill='%23e5483a'/></svg>">
 </head>
 <body>
@@ -44,6 +44,7 @@
           </button>
         </form>
         <p class="form-error" id="form-error" role="alert" hidden></p>
+        <p class="multi"><a href="#/dashboard/batch">Audit up to 10 sites at once →</a><span>No account needed.</span></p>
         <div class="demos">
           <span>Demo sites</span>
           <button type="button" class="demo" aria-pressed="false" data-url="http://shop.consentcheck.test/"><b>Hostile shop</b><small>ignores Reject all · attacks the agent</small></button>
@@ -78,7 +79,7 @@
     </section>
 
     <section aria-labelledby="recent">
-      <div class="list-h"><h2 id="recent">Your recent audits</h2><a href="#/dashboard" style="font-size:14px">All audits →</a></div>
+      <div class="list-h"><h2 id="recent">Your recent audits</h2><a href="#/dashboard" style="font-size:14px">Dashboard →</a></div>
       <ul class="panel rlist" id="recent-list"><li class="none">Audits you start from this browser appear here.</li></ul>
     </section>
   </div>
@@ -165,7 +166,12 @@
       <div class="ttl">
         <span class="eyebrow">Reviewers only</span>
         <h1>Admin sign in</h1>
-        <p>Sign in to see every audit, approve reports and queue batches.</p>
+        <p>You don’t need an account to audit sites or view the dashboard. Sign-in is for the human reviewer, who can:</p>
+        <ul class="why-admin">
+          <li><b>Approve or reject reports.</b> Approved real-site audits are then listed by name on the public dashboard.</li>
+          <li><b>See every audit</b>, including real-site results still waiting for review.</li>
+          <li><b>Queue large batches</b> of up to 200 sites (visitors: 10).</li>
+        </ul>
       </div>
       <div id="login-alert"></div>
       <label>Username<input id="login-user" autocomplete="username" required value="admin"></label>
@@ -183,6 +189,7 @@
       <span class="queue" id="dash-queue">queue idle</span>
     </div>
     <div class="vantage" id="vantage" hidden></div>
+    <div class="vantage pubnote" id="pubnote" hidden></div>
     <section class="hair kpis" id="kpis" aria-label="Key figures, real sites only"></section>
     <div class="row2">
       <section class="panel card" style="flex:2 1 520px" aria-labelledby="vb">
@@ -219,14 +226,14 @@
     </section>
     <section class="panel batch" aria-labelledby="qb">
       <div class="l">
-        <h2 id="qb">Queue a batch of audits</h2>
-        <p>One URL per line. Each site gets its own disposable sandbox; results appear above as they finish.</p>
+        <h2 id="qb">Audit several sites</h2>
+        <p id="batch-help">One URL per line, up to 10. Each site gets its own disposable sandbox; results appear above as they finish.</p>
       </div>
       <form id="batch-form">
         <label for="batch-urls" class="sr">URLs, one per line</label>
         <textarea id="batch-urls" rows="5" spellcheck="false" placeholder="https://example.de&#10;https://example.fr&#10;https://example.it"></textarea>
         <div class="row">
-          <button type="submit" class="btn btn-primary" id="batch-btn" disabled>Queue audits</button>
+          <button type="submit" class="btn btn-primary" id="batch-btn" disabled>Audit sites</button>
           <span role="status" class="msg" id="batch-msg"></span>
         </div>
       </form>
@@ -234,6 +241,6 @@
   </div>
 </template>
 
-<script src="/app.js?v=5"></script>
+<script src="/app.js?v=6"></script>
 </body>
 </html>

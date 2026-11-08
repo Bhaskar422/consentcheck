@@ -113,7 +113,7 @@
     var h = location.hash, m = h.match(/^#\/scan\/([\w-]+)/);
     if (m) showScan(m[1]);
     else if (h.indexOf("#/login") === 0) showLogin();
-    else if (h.indexOf("#/dashboard") === 0) { if (admin) showDashboard(); else location.hash = "#/login"; }
+    else if (h.indexOf("#/dashboard") === 0) showDashboard(h.indexOf("/batch") > 0);
     else showHome();
     window.scrollTo(0, 0);
   }
@@ -466,7 +466,7 @@
       return;
     }
     if (!admin) {
-      box.innerHTML = '<div class="pending"><b>Human review pending</b><span>A reviewer must approve this audit before the report is filed.</span>' +
+      box.innerHTML = '<div class="pending"><b>Human review pending</b><span>This is an automated draft. A human reviewer must approve it before the report is filed or the site is named on the public dashboard.</span>' +
         '<a href="#/login" style="font-size:14px;font-weight:500">Sign in to review →</a></div>';
       return;
     }
@@ -529,8 +529,13 @@
   var dash = { filter: "", q: "", hideDemos: false, data: null };
   function pct(x) { return x == null ? "—" : Math.round(x * 100) + "%"; }
 
-  function showDashboard() {
+  function showDashboard(focusBatch) {
     mount("tpl-dashboard");
+    var maxBatch = admin ? 200 : 10;
+    $("#qb").textContent = admin ? "Queue a batch of audits" : "Audit up to 10 sites";
+    $("#batch-help").textContent = admin
+      ? "One URL per line, up to 200. Each site gets its own disposable sandbox; results appear above as they finish."
+      : "One URL per line, up to 10, no account needed. Each site gets its own disposable sandbox; your results appear in the table above as they finish.";
     var search = $("#row-search"); search.value = dash.q;
     search.addEventListener("input", function () { dash.q = search.value.trim().toLowerCase(); renderRows(); });
     var sw = $("#hide-demos"); sw.setAttribute("aria-checked", String(dash.hideDemos));
@@ -540,36 +545,36 @@
       return ta.value.split(/\n/).map(function (x) { return x.trim(); }).filter(function (x) { return x && x.charAt(0) !== "#" && /\./.test(x); });
     }
     ta.addEventListener("input", function () {
-      var n = validLines().length;
-      bbtn.disabled = !n;
-      bbtn.textContent = n ? "Queue " + n + (n === 1 ? " audit" : " audits") : "Queue audits";
+      var n = validLines().length, over = n > maxBatch;
+      bbtn.disabled = !n || over;
+      bbtn.textContent = over ? "At most " + maxBatch + " sites" : n ? "Audit " + n + (n === 1 ? " site" : " sites") : "Audit sites";
+      msg.className = "msg"; msg.textContent = over ? "Remove " + (n - maxBatch) + (n - maxBatch === 1 ? " line." : " lines.") : "";
     });
     $("#batch-form").addEventListener("submit", function (e) {
       e.preventDefault();
       var urls = validLines();
       if (!urls.length) return;
       bbtn.disabled = true;
-      post("/api/admin/batch", { urls: urls }).then(function (r) {
+      post("/api/scans/batch", { urls: urls }).then(function (r) {
+        r.ids.slice().reverse().forEach(rememberScan);
         msg.className = "msg";
         msg.textContent = "✓ " + r.queued + " queued" + (r.invalid.length ? " · " + r.invalid.length + " skipped (not valid addresses)" : "");
-        ta.value = ""; bbtn.textContent = "Queue audits";
+        ta.value = ""; bbtn.textContent = "Audit sites";
         loadDashboard();
       }).catch(function (err) { msg.className = "msg err"; msg.textContent = err.message; bbtn.disabled = false; });
     });
     loadDashboard();
+    if (focusBatch) setTimeout(function () { $(".batch").scrollIntoView({ block: "center" }); ta.focus(); }, 60);
   }
 
   function loadDashboard() {
     clearTimeout(pollTimer);
-    api("/api/admin/stats").then(function (d) {
+    api("/api/stats?mine=" + encodeURIComponent(myScans().join(","))).then(function (d) {
       if (location.hash.indexOf("#/dashboard") !== 0) return;
       dash.data = d;
       renderDashboard(d);
       pollTimer = setTimeout(loadDashboard, d.totals.queued + d.totals.running ? 4000 : 20000);
-    }).catch(function (e) {
-      if (e.status === 401) { admin = null; renderNav(); location.hash = "#/login"; return; }
-      $("#dash-sub").textContent = e.message;
-    });
+    }).catch(function (e) { $("#dash-sub").textContent = e.message; });
   }
 
   function renderDashboard(d) {
@@ -579,6 +584,15 @@
     q.className = "queue" + (busy ? " on" : "");
     q.innerHTML = busy ? '<span class="dot"></span>' + t.running + " running · " + t.queued + " queued" : "queue idle";
 
+    var pub = d.view === "public", pn = $("#pubnote");
+    pn.hidden = !pub;
+    if (pub) {
+      pn.innerHTML = svg(P.lock) + "<span><b>Public view.</b> The figures cover every audit, anonymously. The table names a real site only after a " +
+        "human reviewer has approved its audit, so no company is named on an unchecked automated result" +
+        (d.unpublished ? " (" + d.unpublished + " awaiting review)" : "") + ". Your own audits always appear. " +
+        '<a href="#/login">Reviewer sign-in</a></span>';
+    }
+    $("#all").firstChild.nodeValue = pub ? "Reviewed audits and yours " : "All audits ";
     var vp = $("#vantage");
     vp.hidden = !!t.eu_vantage;
     vp.innerHTML = svg(P.review) + "<span><b>Scanner location: outside the EU.</b> Many sites only show cookie banners to EU visitors, so a site that shows " +
@@ -680,7 +694,7 @@
       var rev = r.approved === "approved" ? ['<span class="c-pass">✓ Approved</span>'] : r.approved === "rejected" ? ['<span class="c-fail">✕ Rejected</span>']
         : r.status === "done" ? ['<span class="t2">● Pending review</span>'] : ['<span class="t3">—</span>'];
       return '<tr data-id="' + esc(r.id) + '"><th scope="row"><a class="site" href="#/scan/' + esc(r.id) + '">' + esc(r.host) + "</a>" +
-        (r.demo ? '<span class="demo-b">DEMO</span>' : "") + "</th>" +
+        (r.demo ? '<span class="demo-b">DEMO</span>' : "") + (r.mine ? '<span class="mine-b">YOURS</span>' : "") + "</th>" +
         "<td>" + tag(v, "sm") + "</td>" +
         '<td class="r num" style="font-weight:600;color:' + (r.after_reject ? "var(--fail)" : "var(--text-3)") + '">' + r.after_reject + "</td>" +
         '<td class="r num t2">' + r.before_choice + "</td>" +
@@ -689,7 +703,9 @@
         '<td style="white-space:nowrap;font-size:13px">' + rev[0] + "</td>" +
         '<td class="r when">' + esc(ago(r.created)) + "</td></tr>";
     }).join("");
-    var empty = d.rows.length ? ["No audits match these filters.", "Try another verdict or clear the search."] : ["No audits yet.", "Queue a batch below or run one from the home page."];
+    var empty = d.rows.length ? ["No audits match these filters.", "Try another verdict or clear the search."]
+      : d.view === "public" ? ["No reviewed audits yet.", "Audit up to 10 sites below; your results appear here."]
+      : ["No audits yet.", "Queue a batch below or run one from the home page."];
     $("#audits").innerHTML = head + "<tbody>" + (body || '<tr><td colspan="8" class="empty-row"><b style="color:var(--text);display:block;margin-bottom:4px">' +
       esc(empty[0]) + "</b>" + esc(empty[1]) + "</td></tr>") + "</tbody>";
     $$("#audits tbody tr[data-id]").forEach(function (tr) {

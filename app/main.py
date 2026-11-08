@@ -18,8 +18,9 @@ from .sandbox import RUNTIME
 
 STATIC = Path(__file__).parent / "static"
 SAFE_NAME = re.compile(r"^[\w.\-]+$")
-MAX_PENDING = 6        # public visitors, all together
-MAX_PER_CLIENT = 2     # public visitors, per IP address
+MAX_PENDING = 30       # public visitors, all together (the rest wait in the queue)
+MAX_PER_CLIENT = 10    # public visitors, per IP address: queued + running
+MAX_PUBLIC_BATCH = 10  # visitors may audit up to 10 sites at once
 MAX_BATCH = 200        # admin batch queue
 _tasks = set()
 _owner: dict[str, str] = {}   # scan id -> client IP that started it
@@ -139,18 +140,62 @@ def _launch(url, client=""):
     return scan
 
 
+def _client(request: Request) -> str:
+    return request.client.host if request.client else "?"
+
+
+def _check_visitor_quota(request: Request, n: int) -> None:
+    """Visitors (no admin session) may have MAX_PER_CLIENT audits queued or running."""
+    if auth.session_user(request):
+        return
+    client = _client(request)
+    mine = sum(1 for sid, ip in _owner.items() if ip == client
+               and orchestrator.SCANS.get(sid, {}).get("status") in ("queued", "running"))
+    if mine + n > MAX_PER_CLIENT:
+        free = max(0, MAX_PER_CLIENT - mine)
+        raise HTTPException(429, f"You can have {MAX_PER_CLIENT} audits in progress at once"
+                                 + (f"; {free} more can start now." if free else ". Wait for some to finish."))
+    if _pending() + n > MAX_PENDING:
+        raise HTTPException(429, "The auditor is busy. Try again in a minute.")
+
+
+def _parse_urls(raw_urls):
+    urls, bad = [], []
+    for raw in raw_urls:
+        if not raw.strip() or raw.strip().startswith("#"):
+            continue
+        try:
+            urls.append(normalise_url(raw))
+        except HTTPException:
+            bad.append(raw.strip()[:200])
+    urls = list(dict.fromkeys(urls))
+    if not urls:
+        raise HTTPException(400, "No valid website addresses.")
+    return urls, bad
+
+
 @app.post("/api/scans")
 async def create_scan(body: ScanIn, request: Request):
     url = normalise_url(body.url)
-    client = request.client.host if request.client else "?"
-    if not auth.session_user(request):
-        mine = sum(1 for sid, ip in _owner.items() if ip == client
-                   and orchestrator.SCANS.get(sid, {}).get("status") in ("queued", "running"))
-        if mine >= MAX_PER_CLIENT:
-            raise HTTPException(429, "You already have audits running. Wait for them to finish.")
-        if _pending() >= MAX_PENDING:
-            raise HTTPException(429, "The auditor is busy. Try again in a minute.")
-    return {"id": _launch(url, client)["id"]}
+    _check_visitor_quota(request, 1)
+    return {"id": _launch(url, _client(request))["id"]}
+
+
+@app.post("/api/scans/batch")
+async def create_batch(body: BatchIn, request: Request):
+    """Several sites at once: up to 10 for visitors, up to 200 for a signed-in admin."""
+    admin = auth.session_user(request)
+    limit = MAX_BATCH if admin else MAX_PUBLIC_BATCH
+    urls, bad = _parse_urls(body.urls)
+    if len(urls) > limit:
+        raise HTTPException(400, f"At most {limit} sites at once" + ("." if admin else
+                                 ". Reviewers can sign in to queue larger batches."))
+    if admin and _pending() + len(urls) > MAX_BATCH:
+        raise HTTPException(429, f"The queue holds at most {MAX_BATCH} audits. {_pending()} are already waiting.")
+    _check_visitor_quota(request, len(urls))
+    owner = "admin" if admin else _client(request)
+    ids = [_launch(u, owner)["id"] for u in urls]
+    return {"queued": len(ids), "ids": ids, "invalid": bad}
 
 
 def _summary(s):
@@ -175,29 +220,31 @@ async def list_scans(request: Request, ids: str = ""):
     return [_summary(s) for s in scans]
 
 
-# ------------------------------------------------------------------ admin
+# ------------------------------------------------------------------ dashboard
+@app.get("/api/stats")
+async def public_stats(request: Request, mine: str = ""):
+    """Dashboard for everyone. Aggregate figures cover every audit, but the table only
+    names a real site once a human reviewer has approved its audit (plus the visitor's
+    own audits, looked up by id). Admins see every row."""
+    data = dashboard.stats(list(orchestrator.SCANS.values()))
+    admin = auth.session_user(request)
+    data["view"] = "admin" if admin else "public"
+    if not admin:
+        own = set(i for i in mine.split(",")[:50] if i)
+        data["unpublished"] = sum(1 for r in data["rows"] if not r["demo"] and r["approved"] != "approved")
+        data["rows"] = [dict(r, mine=r["id"] in own) for r in data["rows"]
+                        if r["id"] in own or (r["approved"] == "approved" and not r["demo"])]
+    return data
+
+
 @app.get("/api/admin/stats")
 async def admin_stats(_user: str = Depends(auth.require_admin)):
     return dashboard.stats(list(orchestrator.SCANS.values()))
 
 
 @app.post("/api/admin/batch")
-async def admin_batch(body: BatchIn, _user: str = Depends(auth.require_admin)):
-    urls, bad = [], []
-    for raw in body.urls:
-        if not raw.strip() or raw.strip().startswith("#"):
-            continue
-        try:
-            urls.append(normalise_url(raw))
-        except HTTPException:
-            bad.append(raw.strip()[:200])
-    urls = list(dict.fromkeys(urls))
-    if not urls:
-        raise HTTPException(400, "No valid website addresses.")
-    if _pending() + len(urls) > MAX_BATCH:
-        raise HTTPException(429, f"The queue holds at most {MAX_BATCH} audits. {_pending()} are already waiting.")
-    ids = [_launch(u, "admin")["id"] for u in urls]
-    return {"queued": len(ids), "ids": ids, "invalid": bad}
+async def admin_batch(body: BatchIn, request: Request, _user: str = Depends(auth.require_admin)):
+    return await create_batch(body, request)
 
 
 @app.get("/api/scans/{scan_id}")
